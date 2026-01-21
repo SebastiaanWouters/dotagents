@@ -41,6 +41,9 @@ Ask these questions:
 1. **Which agent/harness are you using?** (e.g., Amp, Claude Code, Cursor, Cline, other)
 2. **Which skills do you need?** (show the available skills table above)
 3. **Does your project already have an agent config?** (check for existing `.agents/`, `.claude/`, etc.)
+4. **Do you want to install the base AGENTS.md / CLAUDE.md file?** (recommended for new projects)
+   - For **Amp**: Copy `AGENTS.md` to the project root
+   - For **Claude Code**: Copy `AGENTS.md` as `CLAUDE.md` to the project root
 
 ### 2. Research the Agent's Skill System
 
@@ -53,13 +56,19 @@ Before copying files, research how the chosen agent handles skills:
 - **Amp**: Skills go in `.agents/skills/<skill-name>/SKILL.md`
 - **Claude Code**: Skills go in `.claude/skills/<skill-name>/SKILL.md` (or similar)
 
-### 3. Install Skills
+### 3. Install Base Config (if requested)
+
+If the user wants the base config file:
+- **Amp**: `cp AGENTS.md <target-project>/AGENTS.md`
+- **Claude Code**: `cp AGENTS.md <target-project>/CLAUDE.md`
+
+### 4. Install Skills
 
 For each selected skill:
 1. Copy the skill directory from `skills/<skill-name>/` to the agent's skills directory
 2. Check if the skill has MCP dependencies (e.g., `playwriter`, `documentation-lookup`)
 
-### 4. Handle MCP Servers
+### 5. Handle MCP Servers
 
 Some skills require MCP server configurations:
 
@@ -77,7 +86,7 @@ Some skills require MCP server configurations:
 
 Reference this repo's `.mcp.json` for example server configurations.
 
-### 5. Verify Installation
+### 6. Verify Installation
 
 After installation:
 1. Confirm skill files are in the correct location
