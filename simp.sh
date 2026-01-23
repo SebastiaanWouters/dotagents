@@ -2,8 +2,7 @@
 #
 # simp.sh - Autonomous ticket implementation loop
 #
-# A simple while loop that runs Claude Code repeatedly.
-# Claude handles everything using the ticket and chef skills.
+# Uses tk directly for tickets, chef directly for Telegram, Claude only for implementation.
 #
 
 set -euo pipefail
@@ -16,69 +15,83 @@ log() {
     echo "[simp $(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+notify() {
+    bun -e "import{chef}from'./skills/chef/scripts/chef.ts';await chef.notify(\`$1\`)" 2>/dev/null || true
+}
+
+ask() {
+    bun -e "import{chef}from'./skills/chef/scripts/chef.ts';console.log(await chef.ask(\`$1\`))" 2>/dev/null
+}
+
 # --- Prompts ---
 
-WORK_ON_TICKET='Use the ticket skill to get the next available ticket.
+WORK_ON_TICKET='Implement ticket: %s
 
-If a ticket exists:
-1. Use chef skill to notify user: "Starting work on: <ticket-id> - <title>"
-2. Implement the ticket completely (functionality, tests, good coverage)
+1. Read the ticket with tk show %s
+2. Implement completely (functionality, tests, good coverage)
 3. Use code-review skill to review your changes
 4. Implement all review suggestions
 5. Commit and push
-6. Close the ticket with tk close
-7. Use chef skill to notify user with a summary of what was done
-8. As your final line, output exactly: SIMP_DONE
+6. Close with tk close %s
 
-If no tickets available, output exactly: SIMP_NO_TICKETS'
+Output a brief summary of what was done.'
 
-ASK_USER='Use the chef skill to ask the user: "No tickets. What should I work on?"
-
-Wait for their response. As your final line, output exactly: SIMP_USER_SAID:<their response>'
-
-HANDLE_REQUEST='The user requested:
+HANDLE_REQUEST='Implement this request:
 
 %s
 
-1. Use chef skill to notify: "Working on your request..."
-2. Implement the request completely (code, tests if needed)
-3. Commit and push if code was changed
-4. Use chef skill to notify user with summary of what was done
-5. As your final line, output exactly: SIMP_DONE'
+1. Implement completely (code, tests if needed)
+2. Commit and push if code was changed
+
+Output a brief summary of what was done.'
 
 # --- Main loop ---
 
 log "Starting simp loop"
+notify "Simp loop started"
 
 while true; do
     log "Checking for tickets..."
-    result=$($CLAUDE "$WORK_ON_TICKET" 2>>"$LOG_FILE") || true
+    ticket=$(tk ready --limit 1 2>/dev/null | head -1 | awk '{print $1}') || true
 
-    if [[ "$result" == *"SIMP_NO_TICKETS"* ]]; then
+    if [[ -n "$ticket" ]]; then
+        title=$(tk show "$ticket" 2>/dev/null | head -1 | sed 's/^# //') || title="$ticket"
+        log "Working on ticket: $ticket - $title"
+        notify "Starting: $ticket - $title"
+
+        prompt="${WORK_ON_TICKET//\%s/$ticket}"
+        result=$($CLAUDE "$prompt" 2>>"$LOG_FILE") || true
+
+        log "Ticket $ticket completed"
+        notify "Done: $ticket - $title
+
+$result"
+    else
         log "No tickets, asking user..."
-        response=$($CLAUDE "$ASK_USER" 2>>"$LOG_FILE") || true
+        user_input=$(ask "No tickets. What should I work on?") || true
 
-        # Extract user input from SIMP_USER_SAID:<input>
-        if [[ "$response" =~ SIMP_USER_SAID:(.*)$ ]]; then
-            user_input="${BASH_REMATCH[1]}"
-            user_input="${user_input## }"  # trim leading space
-        else
-            log "No valid response, retrying..."
+        if [[ -z "$user_input" ]]; then
+            log "No response, retrying..."
             continue
         fi
 
-        # Check for stop commands (case insensitive)
         user_lower="${user_input,,}"
         if [[ "$user_lower" == "stop" || "$user_lower" == "pause" || "$user_lower" == "wait" ]]; then
             log "User requested stop. Exiting."
+            notify "Simp loop stopped"
             exit 0
         fi
 
-        log "Handling user request: $user_input"
+        log "Handling request: $user_input"
+        notify "Working on: $user_input"
+
         prompt="${HANDLE_REQUEST/\%s/$user_input}"
-        $CLAUDE "$prompt" 2>>"$LOG_FILE" || true
-    else
-        log "Ticket work completed"
+        result=$($CLAUDE "$prompt" 2>>"$LOG_FILE") || true
+
+        log "Request completed"
+        notify "Done: $user_input
+
+$result"
     fi
 
     sleep 1
