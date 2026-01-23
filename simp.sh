@@ -34,7 +34,15 @@ WORK_ON_TICKET='Implement ticket: %s
 5. Commit and push
 6. Close with tk close %s
 
-Output a brief summary of what was done.'
+Output a brief summary of what was done.
+
+COMMUNICATION: Use the chef skill to communicate with the user via Telegram.
+- chef.notify(msg) - Send status updates (non-blocking)
+- chef.ask(question) - Ask free-text questions (blocking, waits for response)
+- chef.confirm(question) - Ask yes/no questions (blocking)
+- chef.choice(question, options) - Multiple choice (blocking)
+
+Be autonomous during implementation. Only use chef to ask questions between iterations when you need clarification or user input that cannot be resolved by investigating the codebase.'
 
 HANDLE_REQUEST='Implement this request:
 
@@ -43,7 +51,15 @@ HANDLE_REQUEST='Implement this request:
 1. Implement completely (code, tests if needed)
 2. Commit and push if code was changed
 
-Output a brief summary of what was done.'
+Output a brief summary of what was done.
+
+COMMUNICATION: Use the chef skill to communicate with the user via Telegram.
+- chef.notify(msg) - Send status updates (non-blocking)
+- chef.ask(question) - Ask free-text questions (blocking, waits for response)
+- chef.confirm(question) - Ask yes/no questions (blocking)
+- chef.choice(question, options) - Multiple choice (blocking)
+
+Be autonomous during implementation. Only use chef to ask questions between iterations when you need clarification or user input that cannot be resolved by investigating the codebase.'
 
 # --- Main loop ---
 
