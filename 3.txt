@@ -1,3 +1,11 @@
-The quick brown fox jumps over the lazy dog.
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-42 is the answer to life, the universe, and everything.
+Why do programmers prefer dark mode?
+Because light attracts bugs! 🐛
+
+Why did the developer go broke?
+Because he used up all his cache! 💸
+
+Why do Java developers wear glasses?
+Because they can't C#! 👓
+
+A SQL query walks into a bar, walks up to two tables and asks...
+"Can I join you?" 🍺
