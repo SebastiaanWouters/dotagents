@@ -1,11 +1,11 @@
 ---
 name: chef
-description: Non-blocking Telegram Q&A for AI agents. Send questions, poll for answers - no blocking waits. Supports choice/confirm/ask, notes collection, and inbox polling. Agent receives all notes and decides relevance.
+description: Blocking Telegram prompts for AI agents. Sends questions to user via Telegram bot with inline buttons, waits indefinitely for response. Use for multiple choice, yes/no confirms, or free text input during task execution.
 ---
 
 # Chef
 
-Telegram Q&A for AI agents. Non-blocking send/check pattern.
+Blocking Telegram Q&A. Send question → wait for answer → return to agent.
 
 ## Setup
 
@@ -18,79 +18,37 @@ TELEGRAM_CHAT_ID=xxx
 ## Import
 
 ```typescript
-import { chef } from "./.claude/skills/chef/scripts/chef.ts";
+import { chef } from "./skills/chef/scripts/chef.ts";
 ```
 
-## Questions
+## API
 
 ### Multiple Choice
 ```typescript
 const idx = await chef.choice("Which database?", ["PostgreSQL", "SQLite", "MySQL"]);
-// Returns: 0, 1, 2, or null (timeout)
-
-// Allow free text answer
-const answer = await chef.choice("Database?", ["PG", "SQLite"], { allowOther: true });
-// Returns: 0, 1, "custom text", or null
+// Returns: 0, 1, or 2
 ```
 
 ### Yes/No
 ```typescript
 const ok = await chef.confirm("Deploy to production?");
-// Returns: true, false, or null
+// Returns: true or false
 ```
 
 ### Free Text
 ```typescript
 const name = await chef.ask("Project name?");
-// Returns: string or null
+// Returns: string
 ```
 
-## Non-Blocking Pattern
-
-```typescript
-// Send immediately, get ID
-const id = await chef.sendChoice("Pick:", ["A", "B"]);
-const id = await chef.sendConfirm("Continue?");
-const id = await chef.send("Name?");
-
-// Check later (non-blocking)
-const answer = await chef.check(id);  // null if not answered
-
-// Wait with timeout
-const answer = await chef.wait(id, 30000);  // 30s
-
-// List pending
-const pending = await chef.pending();
-
-// Cancel
-await chef.cancel(id);
-```
-
-## Inbox & Notes
-
-```typescript
-// Get all unread messages
-const messages = await chef.inbox();
-// [{ id, text, timestamp, isNote, isCommand }]
-
-// Get /note messages only
-const notes = await chef.checkNotes();
-// [{ id, text, timestamp, raw }]
-```
-
-## Notifications
-
+### Notification (no response)
 ```typescript
 await chef.notify("Task complete!");
-await chef.notify("Processing...", { typing: true });
 ```
 
-## CLI
+## Behavior
 
-```bash
-bun chef.ts pending
-bun chef.ts check <id>
-bun chef.ts notes
-bun chef.ts inbox
-bun chef.ts clear
-```
+- All methods block until user responds (infinite timeout)
+- Inline buttons for choice/confirm, text reply for ask
+- Confirms answer back to user in Telegram
+- Returns typed values directly (no null handling needed)
