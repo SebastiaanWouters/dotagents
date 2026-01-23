@@ -1,53 +1,96 @@
 ---
 name: chef
-description: Ask user questions via Telegram bot. Provides choice(), confirm(), and ask() functions to get user input with tap-to-answer buttons and 30-minute timeout. Zero dependencies, uses native fetch. Useful when agent needs clarification or user decision during task execution.
+description: Non-blocking Telegram Q&A for AI agents. Send questions, poll for answers - no blocking waits. Supports choice/confirm/ask, notes collection, and inbox polling. Agent receives all notes and decides relevance.
 ---
 
 # Chef
 
-Ask users questions via Telegram, get responses programmatically.
+Telegram Q&A for AI agents. Non-blocking send/check pattern.
 
 ## Setup
 
-Set `TELEGRAM_BOT_TOKEN` via any of:
-- Export: `export TELEGRAM_BOT_TOKEN=xxx`
-- Project `.env.local`: `TELEGRAM_BOT_TOKEN=xxx`
-- Project `.env`: `TELEGRAM_BOT_TOKEN=xxx`
+Requires in `.env`:
+```
+TELEGRAM_BOT_TOKEN=xxx
+TELEGRAM_CHAT_ID=xxx
+```
 
-Then message your bot once on Telegram.
-
-## Usage
+## Import
 
 ```typescript
-import { chef } from "./chef.ts";
+import { chef } from "./.claude/skills/chef/scripts/chef.ts";
+```
 
-// Multiple choice - returns index (0,1,2...) or null on timeout
-const choice = await chef.choice("Which database?", ["PostgreSQL", "MySQL", "SQLite"]);
+## Questions
 
-// Yes/No - returns true/false or null on timeout
+### Multiple Choice
+```typescript
+const idx = await chef.choice("Which database?", ["PostgreSQL", "SQLite", "MySQL"]);
+// Returns: 0, 1, 2, or null (timeout)
+
+// Allow free text answer
+const answer = await chef.choice("Database?", ["PG", "SQLite"], { allowOther: true });
+// Returns: 0, 1, "custom text", or null
+```
+
+### Yes/No
+```typescript
 const ok = await chef.confirm("Deploy to production?");
-
-// Free text - returns string or null on timeout
-const name = await chef.ask("Project name?");
-
-// Notification (no response)
-await chef.notify("Task complete!");
+// Returns: true, false, or null
 ```
 
-## Handling Responses
+### Free Text
+```typescript
+const name = await chef.ask("Project name?");
+// Returns: string or null
+```
+
+## Non-Blocking Pattern
 
 ```typescript
-const choice = await chef.choice("Environment?", ["prod", "staging", "dev"]);
+// Send immediately, get ID
+const id = await chef.sendChoice("Pick:", ["A", "B"]);
+const id = await chef.sendConfirm("Continue?");
+const id = await chef.send("Name?");
 
-if (choice === null) {
-  // Timeout or error - use default
-  env = "dev";
-} else {
-  env = ["prod", "staging", "dev"][choice];
-}
+// Check later (non-blocking)
+const answer = await chef.check(id);  // null if not answered
+
+// Wait with timeout
+const answer = await chef.wait(id, 30000);  // 30s
+
+// List pending
+const pending = await chef.pending();
+
+// Cancel
+await chef.cancel(id);
 ```
 
-## Config
+## Inbox & Notes
 
-- `TELEGRAM_BOT_TOKEN` - Required
-- `PROMPT_TIMEOUT_MS` - Default 1800000 (30 min)
+```typescript
+// Get all unread messages
+const messages = await chef.inbox();
+// [{ id, text, timestamp, isNote, isCommand }]
+
+// Get /note messages only
+const notes = await chef.checkNotes();
+// [{ id, text, timestamp, raw }]
+```
+
+## Notifications
+
+```typescript
+await chef.notify("Task complete!");
+await chef.notify("Processing...", { typing: true });
+```
+
+## CLI
+
+```bash
+bun chef.ts pending
+bun chef.ts check <id>
+bun chef.ts notes
+bun chef.ts inbox
+bun chef.ts clear
+```
