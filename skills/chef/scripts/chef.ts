@@ -57,33 +57,62 @@ async function loadEnv() {
   }
 }
 
+class ChefError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = "ChefError";
+  }
+}
+
 function getConfig() {
   const token = Bun.env.TELEGRAM_BOT_TOKEN ?? process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = Bun.env.TELEGRAM_CHAT_ID ?? process.env.TELEGRAM_CHAT_ID;
+  const chatIdStr = Bun.env.TELEGRAM_CHAT_ID ?? process.env.TELEGRAM_CHAT_ID;
 
-  if (!token) {
-    console.error("❌ TELEGRAM_BOT_TOKEN not found. Set in .env");
-    process.exit(1);
+  if (!token || token.trim() === "") {
+    throw new ChefError("TELEGRAM_BOT_TOKEN not found or empty. Set in .env", "MISSING_TOKEN");
   }
-  if (!chatId) {
-    console.error("❌ TELEGRAM_CHAT_ID not found. Set in .env");
-    process.exit(1);
+  if (!chatIdStr || chatIdStr.trim() === "") {
+    throw new ChefError("TELEGRAM_CHAT_ID not found or empty. Set in .env", "MISSING_CHAT_ID");
   }
 
-  return { api: `${API}${token}`, chatId: parseInt(chatId) };
+  const chatId = parseInt(chatIdStr.trim(), 10);
+  if (isNaN(chatId)) {
+    throw new ChefError(`TELEGRAM_CHAT_ID must be a number, got: "${chatIdStr}"`, "INVALID_CHAT_ID");
+  }
+
+  return { api: `${API}${token.trim()}`, chatId };
 }
 
 await loadEnv();
 
 async function call<T>(api: string, method: string, body?: object): Promise<T> {
-  const res = await fetch(`${api}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.description ?? "API error");
-  return json.result;
+  let res: Response;
+  try {
+    res = await fetch(`${api}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    throw new ChefError(`Network error: ${err instanceof Error ? err.message : "fetch failed"}`, "NETWORK_ERROR");
+  }
+
+  if (!res.ok) {
+    throw new ChefError(`HTTP ${res.status}: ${res.statusText}`, "HTTP_ERROR");
+  }
+
+  let json: { ok: boolean; result?: T; description?: string };
+  try {
+    json = await res.json();
+  } catch {
+    throw new ChefError("Invalid JSON response from Telegram API", "PARSE_ERROR");
+  }
+
+  if (!json.ok) {
+    throw new ChefError(json.description ?? "Telegram API error", "API_ERROR");
+  }
+
+  return json.result as T;
 }
 
 class ChefClient {
@@ -127,7 +156,17 @@ class ChefClient {
   }
 
   async choice(question: string, options: string[]): Promise<number> {
-    const rows = options.map((o, i) => [{ text: `${i + 1}. ${o}`, callback_data: `${i}` }]);
+    if (!options || options.length === 0) {
+      throw new ChefError("choice() requires at least one option", "INVALID_OPTIONS");
+    }
+    if (options.length > 100) {
+      throw new ChefError("choice() supports max 100 options (Telegram limit)", "TOO_MANY_OPTIONS");
+    }
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
+    const rows = options.map((o, i) => [{ text: `${i + 1}. ${o}`.slice(0, 64), callback_data: `${i}` }]);
     const msgId = await this.send(question, { inline_keyboard: rows });
 
     while (true) {
@@ -153,6 +192,10 @@ class ChefClient {
   }
 
   async confirm(question: string): Promise<boolean> {
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
     const kb = { inline_keyboard: [[
       { text: "✅ Yes", callback_data: "y" },
       { text: "❌ No", callback_data: "n" },
@@ -186,6 +229,10 @@ class ChefClient {
   }
 
   async ask(question: string): Promise<string> {
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
     const msgId = await this.send(question);
 
     while (true) {
@@ -199,12 +246,16 @@ class ChefClient {
   }
 
   async notify(message: string): Promise<void> {
+    if (!message || message.trim() === "") {
+      throw new ChefError("message cannot be empty", "EMPTY_MESSAGE");
+    }
+
     await this.send(message);
   }
 }
 
 export const chef = new ChefClient();
-export { ChefClient };
+export { ChefClient, ChefError };
 
 if (import.meta.main) {
   console.log("Chef - Blocking Telegram Q&A\n");
