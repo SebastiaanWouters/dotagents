@@ -31,46 +31,61 @@ FINALLY: Before finishing, update docs/KNOWLEDGE.md with any new learnings:
 if [[ -n "$ticket" ]]; then
     run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🎬 Simp online! Starting ticket $ticket — LFG!'
 
-Use recursive-handoff skill to iterate over tickets until none left:
+Use recursive-handoff skill to process tickets until all done, then ask user what's next.
 
-For each ticket:
-1. tk show <ticket> to read it
-2. Implement autonomously with tests
-3. Use amp-review skill, fix all issues
-4. Commit and push
-5. tk close <ticket>
-6. Use chef to notify completion with a witty summary (what was done, emojis, keep it punchy)
-7. Update docs/KNOWLEDGE.md with any new learnings
-8. Handoff to new thread (this is a completed work item)
-
-Current ticket: $ticket
-
-Be as autonomous as possible during implementation.${KNOWLEDGE_EPILOGUE}"
-else
-    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in!'
-
-Use recursive-handoff skill to loop continuously:
-
-Each iteration:
+LOOP FLOW:
 1. Check for ready tickets with 'tk ready --limit 1'
-2. If ticket exists:
+2. IF TICKET EXISTS:
    - tk show <ticket> to read it
    - Implement autonomously with tests
    - Use amp-review skill, fix all issues
    - Commit and push
    - tk close <ticket>
-   - Use chef to notify completion with a witty summary
-   - Update docs/KNOWLEDGE.md with any new learnings
-   - Handoff to new thread (completed work item)
-3. If no tickets:
-   - Use chef skill to ask the user what to work on next
-   - If user responds with nothing/enough/done/stop/no/nope/quit/exit or similar negative response:
-     - Use chef to send '👋 Alright, signing off! Ping me when you need me.'
-     - EXIT the loop (finish condition met)
-   - Otherwise:
-     - Immediately use chef to send '👍 Got it! On it...'
-     - Implement their request fully, using chef to ask clarifying questions if needed
-     - When done, use chef to send a witty summary of what was accomplished
-     - Update docs/KNOWLEDGE.md with any new learnings
-     - Handoff to new thread (completed work item)${KNOWLEDGE_EPILOGUE}"
+   - Use chef to notify completion with witty summary
+   - Update docs/KNOWLEDGE.md
+   - Use recursive-handoff to continue (fresh context for next ticket)
+
+3. IF NO TICKETS:
+   - Use chef to ask user what to work on next
+   - If NEGATIVE response (nothing/enough/done/stop/no/nope/quit/exit):
+     - Use chef: '👋 Alright, signing off! Ping me when you need me.'
+     - EXIT (finish condition met)
+   - If POSITIVE response (task/idea/description):
+     - Use chef: '👍 Got it! On it...'
+     - Implement request, ask chef questions if needed
+     - Use chef to send witty completion summary
+     - Update docs/KNOWLEDGE.md
+     - Use recursive-handoff to continue (fresh context)
+
+Current ticket to start: $ticket
+${KNOWLEDGE_EPILOGUE}"
+else
+    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in!'
+
+Use recursive-handoff skill to loop continuously.
+
+LOOP FLOW:
+1. Check for ready tickets with 'tk ready --limit 1'
+2. IF TICKET EXISTS:
+   - tk show <ticket> to read it
+   - Implement autonomously with tests
+   - Use amp-review skill, fix all issues
+   - Commit and push
+   - tk close <ticket>
+   - Use chef to notify completion with witty summary
+   - Update docs/KNOWLEDGE.md
+   - Use recursive-handoff to continue (fresh context for next ticket)
+
+3. IF NO TICKETS:
+   - Use chef to ask user what to work on next
+   - If NEGATIVE response (nothing/enough/done/stop/no/nope/quit/exit):
+     - Use chef: '👋 Alright, signing off! Ping me when you need me.'
+     - EXIT (finish condition met)
+   - If POSITIVE response (task/idea/description):
+     - Use chef: '👍 Got it! On it...'
+     - Implement request, ask chef questions if needed
+     - Use chef to send witty completion summary
+     - Update docs/KNOWLEDGE.md
+     - Use recursive-handoff to continue (fresh context)
+${KNOWLEDGE_EPILOGUE}"
 fi
