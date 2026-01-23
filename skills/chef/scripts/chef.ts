@@ -155,19 +155,39 @@ class ChefClient {
     } catch {}
   }
 
-  async choice(question: string, options: string[]): Promise<number> {
+  private indexToLetter(i: number): string {
+    return String.fromCharCode(65 + i);
+  }
+
+  private letterToIndex(letter: string): number {
+    const upper = letter.toUpperCase();
+    if (upper.length === 1 && upper >= "A" && upper <= "Z") {
+      return upper.charCodeAt(0) - 65;
+    }
+    return -1;
+  }
+
+  async choice(question: string, options: string[], cols: number = 4): Promise<number> {
     if (!options || options.length === 0) {
       throw new ChefError("choice() requires at least one option", "INVALID_OPTIONS");
     }
-    if (options.length > 100) {
-      throw new ChefError("choice() supports max 100 options (Telegram limit)", "TOO_MANY_OPTIONS");
+    if (options.length > 26) {
+      throw new ChefError("choice() supports max 26 options (A-Z)", "TOO_MANY_OPTIONS");
     }
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
 
-    const rows = options.map((o, i) => [{ text: `${i + 1}. ${o}`.slice(0, 64), callback_data: `${i}` }]);
-    const msgId = await this.send(question, { inline_keyboard: rows });
+    const optionsList = options.map((o, i) => `${this.indexToLetter(i)}) ${o}`).join("\n");
+    const fullQuestion = `${question}\n\n${optionsList}`;
+
+    const buttons = options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
+    const rows: { text: string; callback_data: string }[][] = [];
+    for (let i = 0; i < buttons.length; i += cols) {
+      rows.push(buttons.slice(i, i + cols));
+    }
+
+    const msgId = await this.send(fullQuestion, { inline_keyboard: rows });
 
     while (true) {
       for (const u of await this.poll()) {
@@ -176,15 +196,16 @@ class ChefClient {
           const idx = parseInt(u.callback_query.data ?? "");
           if (idx >= 0 && idx < options.length) {
             await this.ackCallback(u.callback_query.id);
-            await this.editMessage(msgId, `${question}\n\n✅ ${options[idx]}`);
+            await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
             return idx;
           }
         }
         if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-          const n = parseInt(u.message.text);
-          if (n >= 1 && n <= options.length) {
-            await this.editMessage(msgId, `${question}\n\n✅ ${options[n - 1]}`);
-            return n - 1;
+          const txt = u.message.text.trim();
+          const idx = this.letterToIndex(txt);
+          if (idx >= 0 && idx < options.length) {
+            await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
+            return idx;
           }
         }
       }
@@ -258,10 +279,10 @@ export const chef = new ChefClient();
 export { ChefClient, ChefError };
 
 if (import.meta.main) {
-  console.log("Chef - Blocking Telegram Q&A\n");
+  console.log("Chef - Blocking Telegram Q&A for user interviews\n");
   console.log("API:");
-  console.log("  chef.choice('Pick:', ['A', 'B'])  → index");
-  console.log("  chef.confirm('Continue?')         → boolean");
-  console.log("  chef.ask('Name?')                 → string");
-  console.log("  chef.notify('Done!')              → void");
+  console.log("  chef.choice(q, opts, cols?)  → index (A-Z grid buttons)");
+  console.log("  chef.confirm(q)              → boolean (Yes/No)");
+  console.log("  chef.ask(q)                  → string (free text)");
+  console.log("  chef.notify(msg)             → void (no response)");
 }
