@@ -42,7 +42,7 @@ Current ticket: $ticket
 
 Be as autonomous as possible during implementation. When all tickets done, use chef skill to ask user what's next. When you receive a response, immediately use chef to send a short confirmation like '👍 Got it! On it...' before starting work.${KNOWLEDGE_EPILOGUE}"
 else
-    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in — no tickets in queue!'
+    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in!'
 
 Use recursive-handoff skill to loop continuously:
 
