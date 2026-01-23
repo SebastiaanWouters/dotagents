@@ -1,10 +1,13 @@
 # Performance & Accessibility Testing
 
+> **Note:** Examples marked **(MCP)** use playwriter MCP functions.
+> For CI tests, use standard Playwright patterns with explicit types.
+
 ## Performance Metrics
 
-### Core Web Vitals
+### Core Web Vitals **(MCP)**
 
-```js
+```ts
 // Capture performance metrics
 const metrics = await page.evaluate(() => {
   const navigation = performance.getEntriesByType('navigation')[0];
@@ -33,9 +36,9 @@ if (metrics.fcp > 2500) {
 }
 ```
 
-### Largest Contentful Paint (LCP)
+### Largest Contentful Paint (LCP) **(MCP)**
 
-```js
+```ts
 // Observe LCP
 const lcp = await page.evaluate(() => {
   return new Promise(resolve => {
@@ -55,9 +58,9 @@ if (lcp && lcp > 2500) {
 }
 ```
 
-### Cumulative Layout Shift (CLS)
+### Cumulative Layout Shift (CLS) **(MCP)**
 
-```js
+```ts
 const cls = await page.evaluate(() => {
   return new Promise(resolve => {
     let clsValue = 0;
@@ -112,9 +115,9 @@ console.log('Large resources (>100KB):', large.map(r => r.url));
 page.removeAllListeners('response');
 ```
 
-### Check for Blocking Resources
+### Check for Blocking Resources **(MCP)**
 
-```js
+```ts
 const blocking = await page.evaluate(() => {
   const scripts = Array.from(document.querySelectorAll('script:not([async]):not([defer])'));
   const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
@@ -132,9 +135,9 @@ if (blocking.blockingScripts.length > 2) {
 
 ## Memory & CPU
 
-### Memory Usage
+### Memory Usage **(MCP)**
 
-```js
+```ts
 const cdp = await getCDPSession({ page });
 const { usedSize, totalSize } = await cdp.send('Runtime.getHeapUsage');
 
@@ -146,9 +149,9 @@ if (usedSize > 50 * 1024 * 1024) {
 }
 ```
 
-### Memory Leak Detection
+### Memory Leak Detection **(MCP)**
 
-```js
+```ts
 // Take heap snapshot before action
 const cdp = await getCDPSession({ page });
 await cdp.send('HeapProfiler.enable');
@@ -175,9 +178,9 @@ if (growth > 1024 * 1024) { // 1MB threshold
 
 ## Accessibility Testing
 
-### Full Accessibility Audit
+### Full Accessibility Audit **(MCP)**
 
-```js
+```ts
 // Get accessibility tree
 const a11y = await accessibilitySnapshot({ page });
 console.log(a11y);
@@ -197,9 +200,9 @@ if (missingAlt.length) {
 }
 ```
 
-### Form Accessibility
+### Form Accessibility **(MCP)**
 
-```js
+```ts
 // Check form labels
 const formIssues = await page.evaluate(() => {
   const issues = [];
@@ -228,9 +231,9 @@ if (formIssues.length) {
 }
 ```
 
-### Color Contrast
+### Color Contrast **(MCP)**
 
-```js
+```ts
 // Basic contrast check (requires visual inspection or external tool)
 const contrast = await page.evaluate(() => {
   const body = window.getComputedStyle(document.body);
@@ -243,9 +246,9 @@ const contrast = await page.evaluate(() => {
 console.log('Body colors:', contrast);
 ```
 
-### Keyboard Navigation
+### Keyboard Navigation **(MCP)**
 
-```js
+```ts
 // Test keyboard navigation
 await page.keyboard.press('Tab');
 let focused = await page.evaluate(() => document.activeElement?.tagName);
@@ -264,9 +267,9 @@ for (let i = 0; i < 10; i++) {
 console.log('Tab order:', tabOrder);
 ```
 
-### ARIA Validation
+### ARIA Validation **(MCP)**
 
-```js
+```ts
 const ariaIssues = await page.evaluate(() => {
   const issues = [];
   
@@ -328,9 +331,9 @@ const apiResults = await smokeLoadTest(page, '/api/users', 10, 5);
 console.log('Smoke load test results:', apiResults);
 ```
 
-## Throttling Simulation
+## Throttling Simulation **(MCP)**
 
-```js
+```ts
 // Simulate slow network
 const cdp = await getCDPSession({ page });
 await cdp.send('Network.emulateNetworkConditions', {
@@ -353,9 +356,9 @@ await cdp.send('Network.emulateNetworkConditions', {
 });
 ```
 
-## CPU Throttling
+## CPU Throttling **(MCP)**
 
-```js
+```ts
 const cdp = await getCDPSession({ page });
 
 // 4x slowdown

@@ -1,9 +1,8 @@
 ---
 name: e2e-tester
 description: >
-  Uses playwriter MCP to explore UI, capture stable locators, and draft CI-ready E2E tests.
+  Explores UI via playwriter MCP, generates CI-ready Playwright tests.
   Triggers on "e2e test", "write e2e tests", "test the UI", "/e2e-tester".
-  Use for validating user flows (auth, forms, navigation) or reproducing flaky UI bugs.
 ---
 
 # E2E Tester
@@ -16,7 +15,7 @@ Two-phase workflow: **explore interactively** via playwriter MCP, then **generat
 
 ## Prerequisites
 
-1. Load playwriter skill: `use playwriter`
+1. Load playwriter skill: `use playwriter` (or ensure mcp.json is configured)
 2. Chrome extension installed and clicked on target tab
 3. App running at accessible URL
 4. Verify control: `await screenshotWithAccessibilityLabels({ page });`
@@ -138,8 +137,8 @@ await page.waitForTimeout(1000);
 
 ### In playwriter MCP (exploration)
 ```js
-// Intercept and store responses
-state.responses = [];
+// Intercept and store responses (state persists between MCP calls)
+state.responses = state.responses || [];
 page.on('response', async res => { if (res.url().includes('/api/')) { try { state.responses.push({ url: res.url(), status: res.status(), body: await res.json() }); } catch {} } });
 
 await page.locator('aria-ref=e5').click();
@@ -148,7 +147,7 @@ await waitForPageLoad({ page });
 console.log('Captured', state.responses.length, 'API calls');
 state.responses.forEach(r => console.log(r.status, r.url.slice(0, 80)));
 
-// Clean up
+// Clean up listener (state.responses persists for next call)
 page.removeAllListeners('response');
 ```
 

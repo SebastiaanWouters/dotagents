@@ -8,15 +8,33 @@
  *   const ok = await chef.confirm("Proceed?");
  *   const text = await chef.ask("Name?");
  *   await chef.notify("Done!");
+ *   await chef.sendPhoto("/path/to/image.png", "Check this out!");
+ *   const photoPath = await chef.askPhoto("Send me a screenshot?");
  *
  * Setup: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
  */
 
+import { randomUUID } from "crypto";
+
 const API = "https://api.telegram.org/bot";
+
+interface PhotoSize {
+  file_id: string;
+  file_unique_id: string;
+  width: number;
+  height: number;
+  file_size?: number;
+}
 
 interface Update {
   update_id: number;
-  message?: { message_id: number; chat: { id: number }; text?: string };
+  message?: {
+    message_id: number;
+    chat: { id: number };
+    text?: string;
+    photo?: PhotoSize[];
+    caption?: string;
+  };
   callback_query?: { id: string; data?: string; message?: { message_id: number; chat: { id: number } } };
 }
 
@@ -290,6 +308,87 @@ class ChefClient {
 
     await this.send(message);
   }
+
+  async sendPhoto(filePath: string, caption?: string): Promise<void> {
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) {
+      throw new ChefError(`File not found: ${filePath}`, "FILE_NOT_FOUND");
+    }
+
+    const formData = new FormData();
+    formData.append("chat_id", String(this.cfg.chatId));
+    formData.append("photo", file);
+    if (caption) {
+      formData.append("caption", caption);
+      formData.append("parse_mode", "Markdown");
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(`${this.cfg.api}/sendPhoto`, {
+        method: "POST",
+        body: formData,
+      });
+    } catch (err) {
+      throw new ChefError(`Network error: ${err instanceof Error ? err.message : "fetch failed"}`, "NETWORK_ERROR");
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new ChefError(`HTTP ${res.status}: ${body}`, "HTTP_ERROR");
+    }
+  }
+
+  private async downloadFile(fileId: string): Promise<string> {
+    const fileInfo = await call<{ file_path: string }>(this.cfg.api, "getFile", { file_id: fileId });
+    const downloadUrl = `https://api.telegram.org/file/bot${this.cfg.api.replace(API, "")}/${fileInfo.file_path}`;
+
+    let res: Response;
+    try {
+      res = await fetch(downloadUrl);
+    } catch (err) {
+      throw new ChefError(`Failed to download file: ${err instanceof Error ? err.message : "fetch failed"}`, "DOWNLOAD_ERROR");
+    }
+
+    if (!res.ok) {
+      throw new ChefError(`HTTP ${res.status} downloading file`, "HTTP_ERROR");
+    }
+
+    const ext = fileInfo.file_path.split(".").pop() || "jpg";
+    const localPath = `/tmp/chef-photo-${randomUUID()}.${ext}`;
+    const buffer = await res.arrayBuffer();
+    await Bun.write(localPath, buffer);
+
+    return localPath;
+  }
+
+  async askPhoto(question: string): Promise<string | null> {
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
+    const msgId = await this.send(`${question}\n\n📸 _Send a photo (or type "skip" to cancel)_`);
+
+    while (true) {
+      for (const u of await this.poll()) {
+        if (u.message?.chat.id === this.cfg.chatId) {
+          if (u.message.photo && u.message.photo.length > 0) {
+            const largestPhoto = u.message.photo[u.message.photo.length - 1];
+            const localPath = await this.downloadFile(largestPhoto.file_id);
+            await this.editMessage(msgId, `${question}\n\n✅ Photo received`);
+            return localPath;
+          }
+          if (u.message.text) {
+            const txt = u.message.text.toLowerCase().trim();
+            if (["skip", "cancel", "no", "none", "n"].includes(txt)) {
+              await this.editMessage(msgId, `${question}\n\n⏭️ Skipped`);
+              return null;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export const chef = new ChefClient();
@@ -302,4 +401,6 @@ if (import.meta.main) {
   console.log("  chef.confirm(q)              → boolean (Yes/No)");
   console.log("  chef.ask(q)                  → string (free text)");
   console.log("  chef.notify(msg)             → void (no response)");
+  console.log("  chef.sendPhoto(path, cap?)   → void (send image)");
+  console.log("  chef.askPhoto(q)             → string (path to /tmp)");
 }

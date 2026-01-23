@@ -1,27 +1,30 @@
 # Advanced E2E Patterns
 
+> **Note:** Examples marked **(MCP)** use playwriter MCP functions for exploration.
+> Convert to CI-safe Playwright waits before committing tests.
+
 ## Page Object Pattern
 
 Organize test logic by page/component using classes or factory functions:
 
-```js
-// Page object as a class (CI-ready pattern)
+```ts
+// Page object as a class (CI-ready)
 class LoginPage {
-  constructor(page) {
-    this.page = page;
+  constructor(private page: Page) {
     this.url = 'http://localhost:3000/login';
   }
+  private url: string;
 
   async goto() {
     await this.page.goto(this.url);
-    await waitForPageLoad({ page: this.page });
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
-  async login(email, pass) {
+  async login(email: string, pass: string) {
     await this.page.getByLabel('Email').fill(email);
     await this.page.getByLabel('Password').fill(pass);
     await this.page.getByRole('button', { name: /sign in/i }).click();
-    await waitForPageLoad({ page: this.page });
+    await this.page.waitForURL(/\/dashboard/);
   }
 
   async getError() {
@@ -30,10 +33,7 @@ class LoginPage {
 }
 
 class DashboardPage {
-  constructor(page) {
-    this.page = page;
-    this.url = 'http://localhost:3000/dashboard';
-  }
+  constructor(private page: Page) {}
 
   async getWelcomeMessage() {
     return this.page.getByRole('heading', { level: 1 }).textContent();
@@ -55,14 +55,12 @@ await loginPage.login('test@example.com', 'password123');
 
 Complex user journeys using flow classes:
 
-```js
-// E-commerce checkout flow as a class
+```ts
+// E-commerce checkout flow (CI-ready)
 class CheckoutFlow {
-  constructor(page) {
-    this.page = page;
-  }
+  constructor(private page: Page) {}
 
-  async addToCart(productId) {
+  async addToCart(productId: string) {
     await this.page.goto(`http://localhost:3000/products/${productId}`);
     await this.page.getByRole('button', { name: /add to cart/i }).click();
     await this.page.getByText('Added to cart').waitFor();
@@ -70,17 +68,17 @@ class CheckoutFlow {
   
   async goToCart() {
     await this.page.getByTestId('cart-icon').click();
-    await waitForPageLoad({ page: this.page });
+    await this.page.waitForLoadState('domcontentloaded');
   }
   
-  async fillShipping(data) {
+  async fillShipping(data: { address: string; city: string; zip: string }) {
     await this.page.getByLabel('Address').fill(data.address);
     await this.page.getByLabel('City').fill(data.city);
     await this.page.getByLabel('ZIP').fill(data.zip);
     await this.page.getByRole('button', { name: /continue/i }).click();
   }
   
-  async fillPayment(card) {
+  async fillPayment(card: { number: string; expiry: string; cvc: string }) {
     const frame = this.page.frameLocator('#payment-frame');
     await frame.getByLabel('Card number').fill(card.number);
     await frame.getByLabel('Expiry').fill(card.expiry);
@@ -208,19 +206,30 @@ await page.keyboard.press('Control+c'); // Copy
 
 ## Responsive Testing
 
+### Exploration **(MCP)**
 ```js
-// Test mobile viewport
+// Visual inspection with MCP
 await page.setViewportSize({ width: 375, height: 667 });
 await page.goto('http://localhost:3000');
-await screenshotWithAccessibilityLabels({ page });
+await screenshotWithAccessibilityLabels({ page }); // MCP-only
+```
 
-// Test tablet
-await page.setViewportSize({ width: 768, height: 1024 });
-await screenshotWithAccessibilityLabels({ page });
+### CI-ready
+```ts
+// Viewport testing in committed tests
+test.describe('responsive', () => {
+  test('mobile layout', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await expect(page.getByTestId('mobile-menu')).toBeVisible();
+  });
 
-// Test desktop
-await page.setViewportSize({ width: 1920, height: 1080 });
-await screenshotWithAccessibilityLabels({ page });
+  test('desktop layout', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto('/');
+    await expect(page.getByTestId('desktop-nav')).toBeVisible();
+  });
+});
 ```
 
 ## Test Data Management
