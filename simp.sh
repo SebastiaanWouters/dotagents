@@ -40,10 +40,12 @@ For each ticket:
 4. Commit and push
 5. tk close <ticket>
 6. Use chef to notify completion with a witty summary (what was done, emojis, keep it punchy)
+7. Update docs/KNOWLEDGE.md with any new learnings
+8. Handoff to new thread (this is a completed work item)
 
 Current ticket: $ticket
 
-Be as autonomous as possible during implementation. When all tickets done, use chef skill to ask user what's next. When you receive a response, immediately use chef to send a short confirmation like '👍 Got it! On it...' before starting work.${KNOWLEDGE_EPILOGUE}"
+Be as autonomous as possible during implementation.${KNOWLEDGE_EPILOGUE}"
 else
     run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in!'
 
@@ -58,6 +60,8 @@ Each iteration:
    - Commit and push
    - tk close <ticket>
    - Use chef to notify completion with a witty summary
+   - Update docs/KNOWLEDGE.md with any new learnings
+   - Handoff to new thread (completed work item)
 3. If no tickets:
    - Use chef skill to ask the user what to work on next
    - If user responds with nothing/enough/done/stop/no/nope/quit/exit or similar negative response:
@@ -67,5 +71,6 @@ Each iteration:
      - Immediately use chef to send '👍 Got it! On it...'
      - Implement their request fully, using chef to ask clarifying questions if needed
      - When done, use chef to send a witty summary of what was accomplished
-     - Continue to next iteration${KNOWLEDGE_EPILOGUE}"
+     - Update docs/KNOWLEDGE.md with any new learnings
+     - Handoff to new thread (completed work item)${KNOWLEDGE_EPILOGUE}"
 fi

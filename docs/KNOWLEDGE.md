@@ -4,16 +4,20 @@
 
 ## Architecture Decisions
 
-<!-- Reference: path/to/file#L10-20 -->
+- Chef script uses Bun, not Node/ts-node: `bun -e "import { chef } from '...'; await chef.notify('msg')"`
+- tk has no `init` command — just `mkdir -p .tickets` to initialize
 
 ## Gotchas & Workarounds
 
-<!-- Things that weren't obvious, edge cases discovered -->
+- Chef CLI requires inline bun eval, not direct script execution with args
+- tk returns error if .tickets/ doesn't exist — simp.sh now creates it (simp.sh#L8)
 
 ## User Preferences
 
-<!-- Patterns learned from user feedback -->
+- Don't claim queue state before checking (no "no tickets" in initial check-in)
+- Handoff after each completed work item, not stay in same context
+- Update KNOWLEDGE.md before handoff
 
 ## External Dependencies
 
-<!-- API quirks, service behaviors, version notes -->
+- playwriter MCP: use `aria-ref` from `accessibilitySnapshot()` for exploration, convert to CI-safe locators for committed tests
