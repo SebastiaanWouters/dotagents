@@ -45,28 +45,44 @@ Options:
   --resolution <res>  Edit output resolution: 1K, 2K, 4K
 ```
 
-## Model Selection
+## Model Selection & Cost Efficiency
 
 → *Consult [models reference](reference/models.md) for discovery commands and selection criteria.*
 
-**Discover available models:**
+### Default: `fal-ai/flux/schnell` (nano-banana tier)
+
+**Use nano-banana as your baseline.** It's fast, cheap, and good enough for 80% of tasks:
+- ~$0.003/image vs $0.05+ for pro models
+- 1-2 seconds vs 10-30 seconds
+- Sufficient quality for icons, sprites, concepts, iterations
+
+### When to upgrade
+
+| Use Case | Model | Cost | When |
+|----------|-------|------|------|
+| **Exploration/iteration** | `flux/schnell` | 💰 | Always start here |
+| **Sprites, icons, UI** | `flux/schnell` | 💰 | Output gets post-processed anyway |
+| **Final brand assets** | `flux/dev` | 💰💰 | When quality is the deliverable |
+| **Print/marketing hero** | `flux-pro` | 💰💰💰 | Only for final output, never exploration |
+| **Photo editing** | `flux/dev` + edit | 💰💰 | Natural blending needed |
+
+### Cost-saving rules
+
+1. **Never use pro for exploration** — iterate cheap, refine expensive
+2. **Downscaled output = cheap model** — favicons don't need 4K source
+3. **Batch variations first** — generate 4 with schnell, pick best, then refine
+4. **Post-processing saves money** — ImageMagick cleanup is free
+
 ```bash
-# List text-to-image models
-curl -s "https://api.fal.ai/v1/models?category=text-to-image&status=active" \
-  -H "Authorization: Key $FAL_API_KEY" | jq '.models[] | .endpoint_id'
+# Good: Cheap exploration
+bun scripts/fal-generate.ts "logo concept" --num 4  # Uses schnell default
 
-# Search by capability
-curl -s "https://api.fal.ai/v1/models?q=pixel+art" -H "Authorization: Key $FAL_API_KEY"
+# Good: Upgrade only for final
+bun scripts/fal-generate.ts "logo concept" --model fal-ai/flux/dev --out final.png
+
+# Bad: Pro model for throwaway concepts
+bun scripts/fal-generate.ts "logo concept" --model fal-ai/flux-pro --num 4  # 💸
 ```
-
-**Selection by asset type:**
-
-| Asset Type | Model Priority | Why |
-|------------|---------------|-----|
-| Game sprites | Fast, stylized | Speed for iteration, style consistency |
-| Icons/favicons | Fast, minimal | Simple outputs, heavy post-processing |
-| Brand/marketing | Pro/quality | Final output quality matters |
-| Photo editing | Image-to-image | Natural blending, accurate edits |
 
 Browse models: https://fal.ai/models
 
