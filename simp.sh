@@ -4,6 +4,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 flock -n /tmp/simp.lock -c 'true' || { echo "simp already running"; exit 1; }
 
+# Initialize tickets directory if not present
+mkdir -p .tickets
+
 run_amp() {
     if ! amp --dangerously-allow-all -x "$1"; then
         echo "[simp] amp exited with error, continuing..."
