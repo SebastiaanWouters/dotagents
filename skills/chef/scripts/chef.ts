@@ -137,6 +137,7 @@ class ChefClient {
     const result = await call<{ message_id: number }>(this.cfg.api, "sendMessage", {
       chat_id: this.cfg.chatId,
       text,
+      parse_mode: "Markdown",
       ...(keyboard && { reply_markup: keyboard }),
     });
     return result.message_id;
@@ -194,7 +195,8 @@ class ChefClient {
     }
 
     const optionsList = options.map((o, i) => `${this.indexToLetter(i)}) ${o}`).join("\n");
-    const fullQuestion = `${question}\n\n${optionsList}`;
+    const hint = `\n\n💡 _Tap a button or type ${options.length > 1 ? `A-${this.indexToLetter(options.length - 1)}` : "A"}_`;
+    const fullQuestion = `${question}\n\n${optionsList}${hint}`;
 
     const buttons = options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
     const rows: { text: string; callback_data: string }[][] = [];
