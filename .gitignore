@@ -2,3 +2,4 @@
 .env.local
 .claude
 simp.log
+output/
