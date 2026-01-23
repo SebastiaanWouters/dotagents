@@ -276,7 +276,7 @@ class ChefClient {
     while (true) {
       for (const u of await this.poll()) {
         if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-          await this.editMessage(msgId, `${question}\n\n✅ ${u.message.text}`);
+          await this.editMessage(msgId, `${question}\n\n✅`);
           return u.message.text;
         }
       }
