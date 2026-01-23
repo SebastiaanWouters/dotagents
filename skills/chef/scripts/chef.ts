@@ -423,14 +423,14 @@ class ChefClient {
     await this.send(message);
   }
 
-  async collect(question: string, stopword: string = "lfg", timeoutMs: number = 600000): Promise<{ responses: string[]; stopped: boolean; timedOut: boolean }> {
+  async collect(question: string, stopword: string = "lfg", timeoutMs: number = 600000, graceMs: number = 30000): Promise<{ responses: string[]; stopped: boolean; timedOut: boolean }> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
 
     const responses: string[] = [];
     const stopLower = stopword.toLowerCase();
-    const deadline = Date.now() + timeoutMs;
+    let deadline = Date.now() + timeoutMs;
     
     await this.send(`${question}\n\n💡 _Type "${stopword.toUpperCase()}" when done_`);
 
@@ -442,6 +442,7 @@ class ChefClient {
             return { responses, stopped: true, timedOut: false };
           }
           responses.push(txt);
+          deadline = Date.now() + graceMs;
           await this.send(`📝 Got it! Keep going or "${stopword.toUpperCase()}" to finish`);
         }
       }
@@ -463,6 +464,6 @@ if (import.meta.main) {
   console.log("                                           → void (non-blocking, resolved by gather)");
   console.log("  chef.confirm(q, timeout?)                → boolean|null (blocking Yes/No, 10min default)");
   console.log("  chef.ask(q, timeout?)                    → string|null (blocking free text, 10min default)");
-  console.log("  chef.collect(q, stopword?, timeout?)     → {responses[], stopped, timedOut} (10min default)");
+  console.log("  chef.collect(q, stopword?, timeout?, grace?) → {responses[], stopped, timedOut} (10min default, 30s grace)");
   console.log("  chef.notify(msg)                         → void (fire & forget)");
 }
