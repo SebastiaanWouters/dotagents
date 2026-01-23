@@ -1,6 +1,6 @@
 ---
 name: bitwarden
-description: Retrieves API keys, passwords, secrets from Bitwarden vault using bw CLI. Use when env variable is missing or secret is needed.
+description: Retrieves API keys, passwords, secrets from Bitwarden vault using bw CLI. Triggers on missing env variables, missing API keys, missing secrets, "secret not found", "env not set", or "use bw".
 ---
 
 # Bitwarden CLI
