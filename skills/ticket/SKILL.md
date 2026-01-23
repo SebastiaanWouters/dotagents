@@ -5,6 +5,14 @@ description: Manage tickets with tk CLI. Triggers on "create ticket", "list tick
 
 # Ticket Management with tk
 
+## Installation
+
+If `tk` is not available (`which tk` returns nothing), install from: `wedow/ticket`
+
+```bash
+go install github.com/wedow/ticket/cmd/tk@latest
+```
+
 Minimal ticket system with dependency tracking. Tickets stored as markdown in `.tickets/`.
 
 Works from any subdirectory—walks parent directories to find `.tickets/`.
