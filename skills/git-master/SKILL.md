@@ -1,6 +1,8 @@
 ---
 name: git-master
 description: "Git expert for atomic commits, rebase/squash, and history search (blame, bisect, log -S). Triggers on: commit, rebase, squash, who wrote, when was X added, find the commit that."
+allowed-tools:
+  - Bash(git:*)
 ---
 
 # Git Master
@@ -19,24 +21,53 @@ Git expert combining: atomic commits, history rewriting, and archaeology.
 
 ## COMMIT MODE
 
+### Arguments
+
+- `description` (optional): What the commit should accomplish
+- `files` (optional): Specific files to commit (defaults to all local changes)
+
 ### Step 1: Gather Context (Parallel)
 
 ```bash
-git status
+git status --short
 git diff --staged --stat
 git diff --stat
 git log --oneline -20
 git branch --show-current
 ```
 
-### Step 2: Detect Commit Style
+Analyze:
+- What files have changed and why
+- The project's existing commit message style
+- Whether changes span multiple logical concerns
+
+### Step 2: Filter Unwanted Files
+
+**Auto-exclude (silently skip):**
+- OS files: `.DS_Store`, `Thumbs.db`, `Desktop.ini`
+- Editor artifacts: `.idea/`, `.vscode/` (unless tracked), `*.swp`, `*~`
+- Ephemeral files: `*.log`, `*.tmp`, `*.cache`
+- Common ignores: `node_modules/`, `__pycache__/`, `dist/`, `build/`
+
+**Auto-exclude with warning:**
+- Secrets: `.env*`, `credentials.*`, `*.pem`, `*.key`, API keys/tokens
+- Large binary files not typically versioned
+
+**Ask user before including:**
+- New file types not seen in git history
+- Files with suspicious patterns (hardcoded passwords, connection strings)
+- Uncommonly large files
+
+When in doubt, ask. When certain it's unwanted, exclude silently.
+
+### Step 3: Detect Commit Style
 
 Analyze `git log --oneline -20`:
 - If most commits match `type:` or `type(scope):` → use **conventional commits**
 - Otherwise → **follow the existing pattern**
 - If no clear pattern or new repo → **default to conventional commits**
 
-### Step 3: Plan Commits
+### Step 4: Plan Commits
 
 **Single commit is appropriate when:**
 - All changes form one logical unit
@@ -44,27 +75,37 @@ Analyze `git log --oneline -20`:
 - Splitting would break the build or lose meaning
 
 **Split into multiple commits when:**
-- Changes serve different purposes
+- Changes serve different purposes (refactor AND bug fix)
 - Different features/fixes mixed together
 - Changes can be meaningfully reverted independently
 
 **Always pair:** Implementation file + its test file = same commit
 
-### Step 4: Execute
+### Step 5: Execute
 
 ```bash
 git add <files>
 git commit -m "<message matching detected style>"
 ```
 
-**Never** mention the agent (Amp, Claude, AI, etc.) in commit messages or as author.
+If user provided a description, incorporate it into the commit message.
+If user provided specific files, only commit those files.
 
-### Step 5: Verify
+**Never** mention the agent (Claude, AI, etc.) in commit messages or as author.
+
+### Step 6: Verify
 
 ```bash
 git status
 git log --oneline -5
 ```
+
+### Commit Message Guidelines
+
+- Use imperative mood ("Add feature" not "Added feature")
+- First line: 50 chars or less, summarizes the change
+- Body (if needed): Explain WHY, not WHAT (the diff shows what)
+- Reference issues if applicable: `Fixes #123`
 
 ---
 

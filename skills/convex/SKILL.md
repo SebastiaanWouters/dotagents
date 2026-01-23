@@ -1,214 +1,221 @@
 ---
 name: convex
-description: Build production-ready Convex applications. Triggers on Convex development, backend functions, realtime data, schema design. Use context7 for detailed examples and latest API docs.
+description: Convex backend development - database, queries, mutations, actions, and real-time APIs
 references:
-  - references/patterns.md
+  - references/chat-app-example.md
 ---
 
-# Convex Development
+# Convex Guidelines
 
-Build reactive, type-safe backends with Convex.
+## Function Syntax
 
-## When to Use Context7
-
-For detailed examples, API specifics, or latest patterns:
-
-```
-Use context7 to look up: [specific topic]
-```
-
-Topics: queries, mutations, actions, schema validators, indexes, file storage, HTTP actions, cron jobs, agents, auth
-
-## Core Concepts
-
-### Function Types
-
-| Type | Purpose | Database Access | External APIs |
-|------|---------|-----------------|---------------|
-| `query` | Read data, cached & reactive | Yes | No |
-| `mutation` | Write data, transactional | Yes | No |
-| `action` | External integrations | Via runQuery/runMutation | Yes |
-| `httpAction` | Webhooks, custom endpoints | Via runQuery/runMutation | Yes |
-
-### Function Structure
+ALWAYS use the new function syntax with args, returns, and handler:
 
 ```typescript
-import { query, mutation, action } from "./_generated/server";
+import { query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const myFunction = query({
-  args: { id: v.id("tableName") },
-  returns: v.object({ name: v.string() }),
+export const f = query({
+  args: { name: v.string() },
+  returns: v.string(),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    return "Hello " + args.name;
   },
 });
 ```
 
-### Validators
-
-| Validator | TypeScript Type |
-|-----------|-----------------|
-| `v.string()` | `string` |
-| `v.number()` | `number` |
-| `v.boolean()` | `boolean` |
-| `v.id("table")` | `Id<"table">` |
-| `v.array(v.string())` | `string[]` |
-| `v.object({...})` | `{...}` |
-| `v.optional(v.string())` | `string \| undefined` |
-| `v.union(v.literal("a"), v.literal("b"))` | `"a" \| "b"` |
-
-## Schema & Indexes
+### HTTP Endpoints
 
 ```typescript
-// convex/schema.ts
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-export default defineSchema({
-  users: defineTable({
-    name: v.string(),
-    email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("user")),
-  })
-    .index("by_email", ["email"])
-    .index("by_role", ["role"]),
-});
-```
-
-**Index Rules:**
-- Always use `.withIndex()` instead of `.filter()` for queries
-- Compound indexes: `["field1", "field2"]` - order matters
-- First field in compound index must have equality check
-
-## Error Handling
-
-```typescript
-import { ConvexError } from "convex/values";
-
-// Throw user-facing errors
-throw new ConvexError({ code: "NOT_FOUND", message: "User not found" });
-
-// Client handling
-try {
-  await mutation();
-} catch (e) {
-  if (e instanceof ConvexError) {
-    console.log(e.data.code, e.data.message);
-  }
-}
-```
-
-## Realtime (React)
-
-```typescript
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
-
-// Auto-subscribes, auto-updates
-const data = useQuery(api.myModule.myQuery, { arg: "value" });
-
-// Skip query conditionally (don't use conditional hooks)
-const data = useQuery(api.myModule.myQuery, userId ? { userId } : "skip");
-
-// Mutations
-const doThing = useMutation(api.myModule.myMutation);
-await doThing({ arg: "value" });
-```
-
-## Actions & External APIs
-
-```typescript
-"use node";  // Required for Node.js APIs
-
-export const callExternalAPI = action({
-  args: { query: v.string() },
-  handler: async (ctx, args) => {
-    // Call external API
-    const response = await fetch("https://api.example.com", {
-      method: "POST",
-      body: JSON.stringify({ query: args.query }),
-    });
-
-    // Store result via mutation
-    await ctx.runMutation(api.results.store, {
-      data: await response.json()
-    });
-  },
-});
-```
-
-## HTTP Actions
-
-```typescript
-// convex/http.ts
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
-
 http.route({
-  path: "/webhook",
+  path: "/echo",
   method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
-    // Verify signature, process webhook
-    await ctx.runMutation(api.events.store, { event: body });
-    return new Response("OK", { status: 200 });
+  handler: httpAction(async (ctx, req) => {
+    const body = await req.bytes();
+    return new Response(body, { status: 200 });
   }),
 });
-
-export default http;
 ```
 
-## File Storage
+## Validators
+
+| Type    | TS Type     | Validator                    | Notes                                    |
+|---------|-------------|------------------------------|------------------------------------------|
+| Id      | string      | `v.id(tableName)`            |                                          |
+| Null    | null        | `v.null()`                   | Use instead of undefined                 |
+| Int64   | bigint      | `v.int64()`                  | NOT `v.bigint()` (deprecated)            |
+| Float64 | number      | `v.number()`                 |                                          |
+| Boolean | boolean     | `v.boolean()`                |                                          |
+| String  | string      | `v.string()`                 |                                          |
+| Bytes   | ArrayBuffer | `v.bytes()`                  |                                          |
+| Array   | Array       | `v.array(values)`            | Max 8192 values                          |
+| Object  | Object      | `v.object({prop: value})`    | Max 1024 entries                         |
+| Record  | Record      | `v.record(keys, values)`     | Keys: ASCII, nonempty, no $ or _ prefix  |
+
+### Discriminated Unions
+```typescript
+v.union(
+  v.object({ kind: v.literal("error"), errorMessage: v.string() }),
+  v.object({ kind: v.literal("success"), value: v.number() }),
+)
+```
+
+## Function Registration
+
+- **Public**: `query`, `mutation`, `action` - exposed to internet
+- **Internal**: `internalQuery`, `internalMutation`, `internalAction` - only callable by other Convex functions
+
+ALWAYS include argument AND return validators. Use `returns: v.null()` if no return value.
+
+## Function Calling
+
+- `ctx.runQuery` - call query from query/mutation/action
+- `ctx.runMutation` - call mutation from mutation/action  
+- `ctx.runAction` - call action from action (only for crossing runtimes V8↔Node)
+
+Use `FunctionReference` (from `api` or `internal` objects), NOT the function directly:
+```typescript
+// Correct
+await ctx.runQuery(api.example.f, { name: "Bob" });
+// Wrong
+await ctx.runQuery(f, { name: "Bob" });
+```
+
+For same-file calls, add type annotation to avoid circularity:
+```typescript
+const result: string = await ctx.runQuery(api.example.f, { name: "Bob" });
+```
+
+## Function References
+
+- `api.path.to.functionName` - public functions
+- `internal.path.to.functionName` - internal functions
+
+File-based routing: `convex/messages/access.ts` → `api.messages.access.functionName`
+
+## Schema
+
+Define in `convex/schema.ts`:
+```typescript
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  messages: defineTable({
+    channelId: v.id("channels"),
+    content: v.string(),
+  }).index("by_channel", ["channelId"]),
+});
+```
+
+System fields auto-added: `_id` (`v.id(tableName)`), `_creationTime` (`v.number()`)
+
+Index naming: include all fields → `by_field1_and_field2`
+
+## Queries
+
+- Do NOT use `filter()` - use `withIndex()` instead
+- No `.delete()` - collect results, iterate, call `ctx.db.delete(row._id)`
+- `.unique()` for single document (throws if multiple match)
+- Default order: ascending `_creationTime`
 
 ```typescript
-// Generate upload URL (mutation)
-export const generateUploadUrl = mutation(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
-});
+const messages = await ctx.db
+  .query("messages")
+  .withIndex("by_channel", (q) => q.eq("channelId", channelId))
+  .order("desc")
+  .take(10);
+```
 
-// Get file URL (query)
-export const getFileUrl = query({
-  args: { storageId: v.id("_storage") },
+### Full Text Search
+```typescript
+const messages = await ctx.db
+  .query("messages")
+  .withSearchIndex("search_body", (q) =>
+    q.search("body", "hello hi").eq("channel", "#general"),
+  )
+  .take(10);
+```
+
+### Pagination
+```typescript
+import { paginationOptsValidator } from "convex/server";
+
+export const list = query({
+  args: { paginationOpts: paginationOptsValidator, author: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.storage.getUrl(args.storageId);
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_author", (q) => q.eq("author", args.author))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+```
+Returns: `{ page, isDone, continueCursor }`
+
+## Mutations
+
+- `ctx.db.patch(id, fields)` - shallow merge
+- `ctx.db.replace(id, doc)` - full replace
+
+## Actions
+
+Add `"use node";` at top for Node.js modules. Actions have NO `ctx.db` access.
+
+```typescript
+"use node";
+import { action } from "./_generated/server";
+
+export const myAction = action({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Use ctx.runQuery/ctx.runMutation for DB access
+    return null;
   },
 });
 ```
 
 ## Scheduling
 
+### Crons
 ```typescript
-// Schedule for later
-await ctx.scheduler.runAfter(60000, api.tasks.process, { taskId });
-
-// Cron jobs in convex/crons.ts
 import { cronJobs } from "convex/server";
+import { internal } from "./_generated/api";
 
 const crons = cronJobs();
-crons.interval("cleanup", { hours: 24 }, api.tasks.cleanup);
+crons.interval("job name", { hours: 2 }, internal.crons.myFunc, {});
 export default crons;
 ```
 
-## Critical Rules
+Only use `crons.interval` or `crons.cron`. NOT `crons.hourly/daily/weekly`.
 
-1. **Never** call external APIs from queries or mutations - use actions
-2. **Never** access `ctx.db` directly in actions - use `runQuery`/`runMutation`
-3. **Always** define `args` and `returns` validators
-4. **Always** use indexes for queries, not `.filter()`
-5. **Always** handle `undefined` loading state in React
+## File Storage
 
-## Quick Reference
+```typescript
+const url = await ctx.storage.getUrl(storageId); // Returns signed URL or null
 
-See [patterns.md](references/patterns.md) for copy-paste patterns.
+// Get metadata via system table
+const metadata = await ctx.db.system.get(storageId);
+// Returns: { _id, _creationTime, contentType?, sha256, size }
+```
 
-## Deep Dives via Context7
+## TypeScript
 
-For comprehensive examples, use context7:
-- "convex query patterns"
-- "convex mutation with validation"
-- "convex file upload react"
-- "convex webhook signature verification"
-- "convex agent threads"
+- Use `Id<'tableName'>` from `./_generated/dataModel` for typed IDs
+- `as const` for string literals in unions
+- Add `@types/node` to package.json when using Node.js modules
+
+```typescript
+import { Id } from "./_generated/dataModel";
+const idToName: Record<Id<"users">, string> = {};
+```
+
+## Examples
+
+- **Chat app with AI**: See [chat-app-example.md](references/chat-app-example.md)

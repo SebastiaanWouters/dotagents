@@ -1,6 +1,6 @@
 ---
 name: agents-md
-description: Creates or refactors AGENTS.md files using progressive disclosure. Use when asked to create, review, refactor, or optimize AGENTS.md/CLAUDE.md files.
+description: Create/refactor AGENTS.md files. Only trigger on `/agents-md`.
 ---
 
 # AGENTS.md Creation & Refactoring
