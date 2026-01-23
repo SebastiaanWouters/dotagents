@@ -7,155 +7,111 @@ description: Manage tickets with tk CLI. Triggers on "create ticket", "list tick
 
 Minimal ticket system with dependency tracking. Tickets stored as markdown in `.tickets/`.
 
+Works from any subdirectory—walks parent directories to find `.tickets/`.
+
 ## Quick Reference
 
 | Command | Purpose |
 |---------|---------|
 | `tk create "title"` | Create ticket |
-| `tk ls` | List all tickets |
-| `tk ready` | Show tickets ready to work on |
-| `tk blocked` | Show blocked tickets |
+| `tk ls` / `tk list` | List all tickets |
+| `tk ready` | Tickets ready to work on (deps resolved) |
+| `tk blocked` | Tickets waiting on dependencies |
+| `tk closed` | Recently closed tickets |
 | `tk show <id>` | View ticket details |
+| `tk edit <id>` | Open in $EDITOR |
 | `tk start <id>` | Mark in progress |
 | `tk close <id>` | Close ticket |
+| `tk reopen <id>` | Reopen ticket |
 | `tk dep <id> <dep-id>` | Add dependency |
+| `tk dep tree <id>` | Show dependency tree |
+| `tk dep cycle` | Detect dependency cycles |
+| `tk undep <id> <dep-id>` | Remove dependency |
+| `tk link <id> <id>...` | Link related tickets (symmetric) |
+| `tk unlink <id> <id>` | Remove link |
+| `tk add-note <id> "text"` | Append timestamped note |
+| `tk query [jq-filter]` | Output as JSON |
 
 Supports partial ID matching: `tk show 5c4` matches `nw-5c46`.
 
 ## Creating Tickets
 
 ```bash
-tk create "Implement auth" \
-  -t feature \
-  -p 1 \
-  --acceptance "Users can login with email/password" \
-  --design "Use JWT tokens, refresh every 24h"
+tk create "Implement auth" -t feature -p 1 \
+  --acceptance "Users can login" --tags ui,backend
 ```
 
 Options:
 - `-t, --type`: bug, feature, task, epic, chore (default: task)
-- `-p, --priority`: 0-4 where 0=highest (default: 2)
+- `-p, --priority`: 0-4, 0=highest (default: 2)
 - `-d, --description`: Detailed description
-- `--acceptance`: Acceptance criteria (when is it done?)
+- `--acceptance`: Acceptance criteria (see below)
 - `--design`: Design/implementation notes
 - `-a, --assignee`: Who owns it
-- `--parent`: Parent ticket for subtasks
-- `--external-ref`: Link to external tracker (gh-123, JIRA-456)
+- `--parent`: Parent ticket ID
+- `--tags`: Comma-separated tags
+- `--external-ref`: External tracker link (gh-123, JIRA-456)
 
 ## Acceptance Criteria
 
-Always include acceptance criteria when creating tickets. This defines "done":
+**Always include acceptance criteria.** This defines "done" and prevents ambiguity.
 
 ```bash
-tk create "Add user settings page" \
-  --acceptance "- User can change password
+tk create "User settings page" --acceptance "- User can change password
 - User can update email
 - Changes persist after logout"
 ```
 
-For existing tickets, use `tk edit <id>` to add acceptance criteria to the markdown file.
+Before closing a ticket:
+1. `tk show <id>` — review acceptance criteria
+2. Verify each criterion is satisfied
+3. `tk close <id>`
 
-## Dependencies
-
-Tickets can depend on other tickets. A ticket is "blocked" until its dependencies are closed.
+## Filtering
 
 ```bash
-# ticket-a depends on ticket-b (b must close before a is ready)
-tk dep ticket-a ticket-b
-
-# View dependency tree
-tk dep tree ticket-a
-tk dep tree --full ticket-a  # Show duplicates
-
-# Remove dependency
-tk undep ticket-a ticket-b
-
-# Link related tickets (symmetric, no blocking)
-tk link ticket-a ticket-b ticket-c
-```
-
-## Finding Work: ls, ready, blocked
-
-**List all tickets:**
-```bash
-tk ls                    # All tickets
-tk ls --status=open      # Only open
-tk ls --status=in_progress
-```
-
-**Find what to work on next:**
-```bash
-tk ready    # Open/in-progress tickets with ALL dependencies resolved
-```
-
-**Find blocked work:**
-```bash
-tk blocked  # Tickets waiting on unresolved dependencies
-```
-
-**Recently closed:**
-```bash
-tk closed            # Last 20 closed
+tk ls -T urgent           # by tag
+tk ls --status=open       # by status
+tk ready -T backend
 tk closed --limit=50
 ```
 
-## Working on Tickets
+## Dependencies
 
 ```bash
-tk start <id>   # Set to in_progress
-tk close <id>   # Set to closed
-tk reopen <id>  # Set back to open
+tk dep ticket-a ticket-b      # a depends on b
+tk dep tree ticket-a          # view tree
+tk dep tree --full ticket-a   # show duplicates
+tk undep ticket-a ticket-b    # remove
+tk dep cycle                  # find cycles
 ```
 
-## Adding Notes
+## Linked Tickets
 
+Symmetric relationships (no blocking):
 ```bash
-tk add-note <id> "Found edge case with null values"
-
-# Or pipe from stdin
-echo "Deployment complete" | tk add-note <id>
+tk link ticket-a ticket-b ticket-c
+tk unlink ticket-a ticket-b
 ```
 
-## Finishing a Ticket
-
-Before closing, verify acceptance criteria are met:
-
-1. `tk show <id>` - Review acceptance criteria
-2. Verify each criterion is satisfied
-3. `tk close <id>` - Close the ticket
-4. `tk ready` - See what's unblocked next
-
-## Querying Tickets
+## Notes
 
 ```bash
-tk query                           # All tickets as JSON
-tk query '.[] | select(.type == "bug")'  # Filter with jq
+tk add-note <id> "Found edge case"
+echo "Deploy complete" | tk add-note <id>
 ```
 
-## Workflow Example
+## Workflow
 
 ```bash
-# 1. Create epic and subtasks
-tk create "User Authentication" -t epic
-# Returns: auth-7f3a
+tk create "Auth system" -t epic                    # auth-7f3a
+tk create "Design schema" --parent auth-7f3a       # sch-2b1c
+tk create "Login endpoint" --parent auth-7f3a \
+  --acceptance "POST /login returns JWT"           # log-9d4e
 
-tk create "Design auth schema" -t task --parent auth-7f3a
-# Returns: schema-2b1c
-
-tk create "Implement login endpoint" -t task --parent auth-7f3a \
-  --acceptance "POST /login returns JWT on valid credentials"
-# Returns: login-9d4e
-
-# 2. Set dependencies
-tk dep login-9d4e schema-2b1c  # login depends on schema
-
-# 3. Check what's ready
-tk ready  # Shows schema-2b1c (login is blocked)
-
-# 4. Work and close
-tk start schema-2b1c
-tk close schema-2b1c
-
-# 5. Now login is ready
-tk ready  # Shows login-9d4e
+tk dep log-9d4e sch-2b1c   # login depends on schema
+tk ready                   # shows sch-2b1c
+tk start sch-2b1c
+tk close sch-2b1c
+tk ready                   # now shows log-9d4e
 ```
