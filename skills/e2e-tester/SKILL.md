@@ -1,41 +1,43 @@
 ---
 name: e2e-tester
 description: >
-  Uses Playwright (via MCP) to explore UI, capture stable locators, and draft CI-ready E2E tests.
+  Uses playwriter MCP to explore UI, capture stable locators, and draft CI-ready E2E tests.
   Triggers on "e2e test", "write e2e tests", "test the UI", "/e2e-tester".
   Use for validating user flows (auth, forms, navigation) or reproducing flaky UI bugs.
 ---
 
 # E2E Tester
 
-Two-phase workflow: **explore interactively** via MCP, then **generate CI-ready** `@playwright/test` code.
+Two-phase workflow: **explore interactively** via playwriter MCP, then **generate CI-ready** `@playwright/test` code.
 
-**Runtime:** MCP interactive browser control  
+**Runtime:** playwriter MCP (`mcp__playwriter__execute`)  
 **Output:** CI-compatible Playwright Test files (`test/expect`)  
 **Constraint:** Never commit `aria-ref` or `accessibilitySnapshot`—MCP-only
 
 ## Prerequisites
 
 1. Load playwriter skill: `use playwriter`
-2. Chrome extension installed and clicked on target tab (screenshot to verify control)
+2. Chrome extension installed and clicked on target tab
 3. App running at accessible URL
+4. Verify control: `await screenshotWithAccessibilityLabels({ page });`
 
 ## Two Modes
 
-### 🔍 Exploration (MCP-only)
-Use for discovery—DO NOT commit this code:
+### 🔍 Exploration (playwriter MCP)
+Use `mcp__playwriter__execute` for discovery—DO NOT commit this code:
 ```js
-// Discover page structure
-console.log(await accessibilitySnapshot({ page }));
+// Discover page structure (use accessibilitySnapshot)
+console.log('url:', page.url()); console.log(await accessibilitySnapshot({ page }).then(x => x.split('\n').slice(0, 30).join('\n')));
+
+// Visual screenshot with labels (for complex layouts)
 await screenshotWithAccessibilityLabels({ page });
 
-// Quick interaction test
-await page.goto('http://localhost:3000');
-console.log('URL:', page.url());
+// Click using aria-ref from snapshot
+await page.locator('aria-ref=e13').click();
 ```
 
 ### ✅ Committed Test (CI-ready)
-Generate this for the test file:
+Generate this for the test file—NO aria-ref, NO accessibilitySnapshot:
 ```ts
 import { test, expect } from '@playwright/test';
 
@@ -106,15 +108,27 @@ test.describe('Authentication', () => {
 });
 ```
 
-## Wait Strategies (prefer Playwright-native)
+## Wait Strategies
 
+### In playwriter MCP (exploration)
+```js
+// Check state after actions
+console.log('url:', page.url()); console.log(await accessibilitySnapshot({ page }).then(x => x.split('\n').slice(0, 30).join('\n')));
+
+// Smart load detection
+await waitForPageLoad({ page });
+
+// Network idle (use sparingly)
+await page.waitForLoadState('networkidle', { timeout: 3000 });
+```
+
+### In CI tests (committed)
 ```ts
 // ✅ Good: Playwright's built-in waits
 await expect(page).toHaveURL(/\/dashboard/);
 await expect(locator).toBeVisible();
 await expect(locator).toHaveText('Success');
 await page.waitForResponse(res => res.url().includes('/api/users'));
-await locator.waitFor({ state: 'visible' });
 
 // ❌ Avoid: arbitrary timeouts (flaky)
 await page.waitForTimeout(1000);
@@ -122,8 +136,24 @@ await page.waitForTimeout(1000);
 
 ## API Response Handling
 
+### In playwriter MCP (exploration)
+```js
+// Intercept and store responses
+state.responses = [];
+page.on('response', async res => { if (res.url().includes('/api/')) { try { state.responses.push({ url: res.url(), status: res.status(), body: await res.json() }); } catch {} } });
+
+await page.locator('aria-ref=e5').click();
+await waitForPageLoad({ page });
+
+console.log('Captured', state.responses.length, 'API calls');
+state.responses.forEach(r => console.log(r.status, r.url.slice(0, 80)));
+
+// Clean up
+page.removeAllListeners('response');
+```
+
+### In CI tests (committed)
 ```ts
-// Preferred: waitForResponse
 test('loads user data', async ({ page }) => {
   const responsePromise = page.waitForResponse(
     res => res.url().includes('/api/users') && res.status() === 200
@@ -169,15 +199,33 @@ export default defineConfig({
 });
 ```
 
+## playwriter MCP Utilities
+
+| Function | Purpose |
+|----------|---------|
+| `accessibilitySnapshot({ page, search? })` | Get structured text of interactive elements |
+| `screenshotWithAccessibilityLabels({ page })` | Screenshot with Vimium-style element labels |
+| `waitForPageLoad({ page })` | Smart load detection |
+| `getCleanHTML({ locator })` | Get cleaned semantic HTML |
+| `getLatestLogs({ page?, count?, search? })` | Retrieve browser console logs |
+| `getCDPSession({ page })` | Send raw CDP commands |
+
+Use `state.varName = value` to persist data between MCP calls.
+
 ## Rules
 
-- **Two modes:** Exploration (MCP) vs Committed (CI)—never mix
-- **Use `expect`:** Not manual `if/throw` checks
-- **Native waits:** Avoid `waitForTimeout`
-- **CI-safe locators:** `getByTestId`, `getByRole`, `getByLabel`—never `aria-ref`
-- **Local variables:** Not global `state` object
-- **Never close browser:** `browser.close()` breaks MCP session
-- **Screenshot on failures** for debugging
+### In playwriter MCP (exploration)
+- Use `aria-ref` from accessibilitySnapshot to click elements
+- Use `state` to persist data across execute calls
+- Always verify state after actions with `accessibilitySnapshot`
+- Clean up listeners: `page.removeAllListeners()`
+- Never call `browser.close()` or `context.close()`
+
+### In CI tests (committed)
+- Use `expect` assertions, not manual `if/throw`
+- Use CI-safe locators: `getByTestId`, `getByRole`, `getByLabel`
+- Never use `aria-ref` or `accessibilitySnapshot`
+- Avoid `waitForTimeout`—use native Playwright waits
 
 ## Reference Files
 

@@ -275,9 +275,12 @@ export const test = base.extend<{ testUser: { email: string; id: string } }>({
 
 ## Security Testing Patterns
 
-### XSS Testing
+> ⚠️ **Note:** These are heuristic smoke checks, not a security audit.
+> Use dedicated security tools (OWASP ZAP, Burp Suite) for thorough testing.
 
-```js
+### XSS Testing (Smoke Check)
+
+```ts
 const xssPayloads = [
   '<script>alert("xss")</script>',
   '"><img src=x onerror=alert(1)>',
@@ -287,12 +290,12 @@ const xssPayloads = [
 for (const payload of xssPayloads) {
   await page.getByLabel('Search').fill(payload);
   await page.getByRole('button', { name: /search/i }).click();
-  await waitForPageLoad({ page });
+  await page.waitForLoadState('networkidle');
   
-  // Check if payload is escaped in output
+  // Heuristic: check if payload appears unescaped
   const html = await page.content();
   if (html.includes(payload) && !html.includes(payload.replace(/</g, '&lt;'))) {
-    console.error('Potential XSS vulnerability with:', payload);
+    console.warn('Potential XSS vulnerability with:', payload);
   }
 }
 ```

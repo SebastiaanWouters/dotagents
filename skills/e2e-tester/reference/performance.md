@@ -296,17 +296,20 @@ if (ariaIssues.length) {
 
 ## Load Testing Pattern
 
-```js
-// Simple load test - multiple concurrent requests
-const loadTest = async (url, concurrency = 10, iterations = 5) => {
-  const results = [];
+> ⚠️ **Note:** This is a client-side concurrency smoke test, not real load testing.
+> For actual load testing, use dedicated tools like k6, Artillery, or Locust.
+
+```ts
+// Client-side concurrency smoke test (browser limits apply)
+async function smokeLoadTest(page, url: string, concurrency = 10, iterations = 5) {
+  const results: number[] = [];
   
   for (let iter = 0; iter < iterations; iter++) {
     const batch = await Promise.all(
       Array(concurrency).fill(0).map(async () => {
         const start = Date.now();
-        await page.evaluate(async (url) => {
-          await fetch(url);
+        await page.evaluate(async (u) => {
+          await fetch(u);
         }, url);
         return Date.now() - start;
       })
@@ -319,10 +322,10 @@ const loadTest = async (url, concurrency = 10, iterations = 5) => {
   const min = Math.min(...results);
   
   return { avg, max, min, total: results.length };
-};
+}
 
-const apiResults = await loadTest('/api/users', 10, 5);
-console.log('Load test results:', apiResults);
+const apiResults = await smokeLoadTest(page, '/api/users', 10, 5);
+console.log('Smoke load test results:', apiResults);
 ```
 
 ## Throttling Simulation
