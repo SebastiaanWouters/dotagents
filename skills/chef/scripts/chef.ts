@@ -182,7 +182,7 @@ class ChefClient {
     return -1;
   }
 
-  async choice(question: string, options: string[], cols: number = 4): Promise<number> {
+  async choice(question: string, options: string[], cols: number = 4): Promise<number | string> {
     if (!options || options.length === 0) {
       throw new ChefError("choice() requires at least one option", "INVALID_OPTIONS");
     }
@@ -194,7 +194,7 @@ class ChefClient {
     }
 
     const optionsList = options.map((o, i) => `${this.indexToLetter(i)}) ${o}`).join("\n");
-    const fullQuestion = `${question}\n\n${optionsList}`;
+    const fullQuestion = `${question}\n\n${optionsList}\n\n(or type your own answer)`;
 
     const buttons = options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
     const rows: { text: string; callback_data: string }[][] = [];
@@ -222,6 +222,9 @@ class ChefClient {
             await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
             return idx;
           }
+          // Free text response - return the text itself
+          await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${txt}`);
+          return txt;
         }
       }
     }
@@ -296,7 +299,7 @@ export { ChefClient, ChefError };
 if (import.meta.main) {
   console.log("Chef - Blocking Telegram Q&A for user interviews\n");
   console.log("API:");
-  console.log("  chef.choice(q, opts, cols?)  → index (A-Z grid buttons)");
+  console.log("  chef.choice(q, opts, cols?)  → index | string (buttons or free text)");
   console.log("  chef.confirm(q)              → boolean (Yes/No)");
   console.log("  chef.ask(q)                  → string (free text)");
   console.log("  chef.notify(msg)             → void (no response)");
