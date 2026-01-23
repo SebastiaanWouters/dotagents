@@ -10,6 +10,11 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 CLAUDE="claude --dangerously-skip-permissions --print"
+LOG_FILE="simp.log"
+
+log() {
+    echo "[simp $(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
 
 # --- Prompts ---
 
@@ -23,14 +28,13 @@ If a ticket exists:
 5. Commit and push
 6. Close the ticket with tk close
 7. Use chef skill to notify user with a summary of what was done
-8. Output: DONE
+8. As your final line, output exactly: SIMP_DONE
 
-If no tickets available:
-1. Output: NO_TICKETS'
+If no tickets available, output exactly: SIMP_NO_TICKETS'
 
 ASK_USER='Use the chef skill to ask the user: "No tickets. What should I work on?"
 
-Wait for their response. Output exactly what they said, nothing else.'
+Wait for their response. As your final line, output exactly: SIMP_USER_SAID:<their response>'
 
 HANDLE_REQUEST='The user requested:
 
@@ -40,28 +44,41 @@ HANDLE_REQUEST='The user requested:
 2. Implement the request completely (code, tests if needed)
 3. Commit and push if code was changed
 4. Use chef skill to notify user with summary of what was done
-5. Output: DONE'
+5. As your final line, output exactly: SIMP_DONE'
 
 # --- Main loop ---
 
+log "Starting simp loop"
+
 while true; do
-    result=$($CLAUDE "$WORK_ON_TICKET" 2>&1) || true
+    log "Checking for tickets..."
+    result=$($CLAUDE "$WORK_ON_TICKET" 2>>"$LOG_FILE") || true
 
-    if [[ "$result" == *"NO_TICKETS"* ]]; then
-        user_input=$($CLAUDE "$ASK_USER" 2>&1) || true
+    if [[ "$result" == *"SIMP_NO_TICKETS"* ]]; then
+        log "No tickets, asking user..."
+        response=$($CLAUDE "$ASK_USER" 2>>"$LOG_FILE") || true
 
-        if [[ -z "$user_input" || "$user_input" == *"timeout"* ]]; then
+        # Extract user input from SIMP_USER_SAID:<input>
+        if [[ "$response" =~ SIMP_USER_SAID:(.*)$ ]]; then
+            user_input="${BASH_REMATCH[1]}"
+            user_input="${user_input## }"  # trim leading space
+        else
+            log "No valid response, retrying..."
             continue
         fi
 
-        if [[ "$user_input" == "stop" || "$user_input" == "pause" || "$user_input" == "wait" ]]; then
-            echo "[simp] User requested stop. Exiting."
+        # Check for stop commands (case insensitive)
+        user_lower="${user_input,,}"
+        if [[ "$user_lower" == "stop" || "$user_lower" == "pause" || "$user_lower" == "wait" ]]; then
+            log "User requested stop. Exiting."
             exit 0
         fi
 
-        # shellcheck disable=SC2059
-        prompt=$(printf "$HANDLE_REQUEST" "$user_input")
-        $CLAUDE "$prompt" || true
+        log "Handling user request: $user_input"
+        prompt="${HANDLE_REQUEST/\%s/$user_input}"
+        $CLAUDE "$prompt" 2>>"$LOG_FILE" || true
+    else
+        log "Ticket work completed"
     fi
 
     sleep 1
