@@ -14,7 +14,7 @@ exec 9>"$LOCK_FILE"
 flock -n 9 || { echo "simp already running"; exit 1; }
 
 CLAUDE="claude --dangerously-skip-permissions --print"
-LOG_FILE="simp.log"
+LOG_FILE="/tmp/simp.log"
 
 log() { echo "[simp $(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
