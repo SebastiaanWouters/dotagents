@@ -15,7 +15,7 @@
 ## User Preferences
 
 - Don't claim queue state before checking (no "no tickets" in initial check-in)
-- Handoff after each completed work item, not stay in same context
+- Always use recursive-handoff (not regular handoff) after completing work — maintains iteration tracking
 - Update KNOWLEDGE.md before handoff
 
 ## External Dependencies
