@@ -118,6 +118,20 @@ async function call<T>(api: string, method: string, body?: object): Promise<T> {
 class ChefClient {
   private cfg = getConfig();
   private offset = 0;
+  private initialized = false;
+
+  private async init(): Promise<void> {
+    if (this.initialized) return;
+    // Fetch latest update_id to skip old messages
+    const updates = await call<Update[]>(this.cfg.api, "getUpdates", {
+      offset: -1,
+      limit: 1,
+    });
+    if (updates.length > 0) {
+      this.offset = updates[0].update_id;
+    }
+    this.initialized = true;
+  }
 
   private async send(text: string, keyboard?: object): Promise<number> {
     const result = await call<{ message_id: number }>(this.cfg.api, "sendMessage", {
@@ -140,6 +154,7 @@ class ChefClient {
   }
 
   private async poll(): Promise<Update[]> {
+    await this.init();
     const updates = await call<Update[]>(this.cfg.api, "getUpdates", {
       offset: this.offset + 1,
       timeout: 30,
