@@ -5,7 +5,7 @@
 # Uses tk directly for tickets, chef directly for Telegram, Claude only for implementation.
 #
 
-set -euo pipefail
+set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 CLAUDE="claude --dangerously-skip-permissions --print"
