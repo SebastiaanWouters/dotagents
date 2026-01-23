@@ -1,16 +1,12 @@
 # Model Selection
 
-Choose the right model for your asset type. **Default to cheap, upgrade only when needed.**
+Choose the right model for your asset type. **Iterate cheap, upgrade for finals.**
 
-## Cost Tiers
+## Strategy
 
-| Tier | Model | Cost/Image | Speed | Use For |
-|------|-------|------------|-------|---------|
-| 🍌 **nano-banana** | `fal-ai/flux/schnell` | ~$0.003 | 1-2s | **Default.** Exploration, sprites, icons, concepts |
-| 🍌🍌 standard | `fal-ai/flux/dev` | ~$0.025 | 5-10s | Final assets, edits, style consistency |
-| 🍌🍌🍌 pro | `fal-ai/flux-pro` | ~$0.05+ | 10-30s | Print, marketing hero, final brand |
-
-**Rule: Start nano-banana, upgrade only for final deliverables.**
+1. **Exploration phase** → Use fast/cheap models (most outputs get discarded)
+2. **Final output** → Upgrade to quality model (when it's the actual deliverable)
+3. **Post-process** → ImageMagick cleanup is free, regeneration isn't
 
 ## Discovering Models
 
@@ -112,22 +108,15 @@ curl -s "https://api.fal.ai/v1/models?category=image-to-image&q=edit" \
 
 ## Cost vs Quality Tradeoffs
 
-| Use Case | Model | Why |
-|----------|-------|-----|
-| Concept exploration | 🍌 schnell | Many iterations, most get discarded |
-| Sprite frames | 🍌 schnell | Post-processed anyway, speed matters |
-| Final game assets | 🍌 schnell | Pixel art doesn't need photorealism |
-| App icons/favicons | 🍌 schnell | Downscaled to 32px, quality irrelevant |
-| Logo concepts | 🍌 schnell | Will be refined/vectorized anyway |
-| Final brand logo | 🍌🍌 dev | Quality visible in deliverable |
-| Marketing hero image | 🍌🍌🍌 pro | Quality is the product |
-| Print materials | 🍌🍌🍌 pro + upscale | Resolution and detail critical |
-
-### Cost math example
-
-Generating a favicon set:
-- **Bad workflow:** 4 concepts × pro ($0.05) = $0.20
-- **Good workflow:** 4 concepts × schnell ($0.003) + 1 final × dev ($0.025) = **$0.037** (5x cheaper)
+| Use Case | Model Tier | Why |
+|----------|------------|-----|
+| Concept exploration | Fast/cheap | Many iterations, most get discarded |
+| Sprite frames | Fast/cheap | Post-processed anyway, speed matters |
+| App icons/favicons | Fast/cheap | Downscaled to 32px, quality irrelevant |
+| Logo concepts | Fast/cheap | Will be refined/vectorized anyway |
+| Final brand logo | Standard | Quality visible in deliverable |
+| Marketing hero image | Pro | Quality is the product |
+| Print materials | Pro + upscale | Resolution and detail critical |
 
 ## Using the Script
 

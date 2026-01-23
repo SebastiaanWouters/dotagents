@@ -49,40 +49,29 @@ Options:
 
 → *Consult [models reference](reference/models.md) for discovery commands and selection criteria.*
 
-### Default: `fal-ai/flux/schnell` (nano-banana tier)
+### Strategy: Cheap iterations, quality finals
 
-**Use nano-banana as your baseline.** It's fast, cheap, and good enough for 80% of tasks:
-- ~$0.003/image vs $0.05+ for pro models
-- 1-2 seconds vs 10-30 seconds
-- Sufficient quality for icons, sprites, concepts, iterations
-
-### When to upgrade
-
-| Use Case | Model | Cost | When |
-|----------|-------|------|------|
-| **Exploration/iteration** | `flux/schnell` | 💰 | Always start here |
-| **Sprites, icons, UI** | `flux/schnell` | 💰 | Output gets post-processed anyway |
-| **Final brand assets** | `flux/dev` | 💰💰 | When quality is the deliverable |
-| **Print/marketing hero** | `flux-pro` | 💰💰💰 | Only for final output, never exploration |
-| **Photo editing** | `flux/dev` + edit | 💰💰 | Natural blending needed |
-
-### Cost-saving rules
-
-1. **Never use pro for exploration** — iterate cheap, refine expensive
-2. **Downscaled output = cheap model** — favicons don't need 4K source
-3. **Batch variations first** — generate 4 with schnell, pick best, then refine
-4. **Post-processing saves money** — ImageMagick cleanup is free
+1. **Explore with fast/cheap models** — most generations get discarded
+2. **Upgrade for final output only** — when quality is the deliverable
+3. **Post-process instead of regenerate** — ImageMagick is free
 
 ```bash
-# Good: Cheap exploration
-bun scripts/fal-generate.ts "logo concept" --num 4  # Uses schnell default
+# Discover available models
+curl -s "https://api.fal.ai/v1/models?category=text-to-image&status=active" \
+  -H "Authorization: Key $FAL_API_KEY" | jq '.models[] | {id: .endpoint_id, name: .metadata.display_name}'
 
-# Good: Upgrade only for final
-bun scripts/fal-generate.ts "logo concept" --model fal-ai/flux/dev --out final.png
-
-# Bad: Pro model for throwaway concepts
-bun scripts/fal-generate.ts "logo concept" --model fal-ai/flux-pro --num 4  # 💸
+# Search by capability
+curl -s "https://api.fal.ai/v1/models?q=fast" -H "Authorization: Key $FAL_API_KEY"
 ```
+
+### When to use what
+
+| Phase | Model Tier | Why |
+|-------|------------|-----|
+| Concept exploration | Fast/cheap | Many iterations, most discarded |
+| Sprites, icons, UI | Fast/cheap | Gets post-processed anyway |
+| Final brand assets | Standard/Pro | Quality visible in deliverable |
+| Print/marketing | Pro | Quality is the product |
 
 Browse models: https://fal.ai/models
 
