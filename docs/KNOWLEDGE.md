@@ -11,6 +11,7 @@
 
 - Chef CLI requires inline bun eval, not direct script execution with args
 - tk returns error if .tickets/ doesn't exist — simp.sh now creates it (simp.sh#L8)
+- `chef.askPhoto()` returns `string | null` — user can type "skip" to cancel (.claude/skills/chef/scripts/chef.ts#L365)
 
 ## User Preferences
 
