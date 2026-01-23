@@ -61,10 +61,18 @@ const name = await chef.ask("What should we name this project?");
 // Returns: string
 ```
 
-### Notification
+### Notification (non-blocking)
 ```typescript
 await chef.notify("Interview complete. Processing answers...");
 ```
+
+Use for:
+- Progress updates: `"Starting work on ticket #123..."`
+- Summaries: `"Completed: added auth, fixed 3 bugs, updated tests"`
+- Status reports: `"Build passed. Deploying to staging..."`
+- Findings: `"Found 5 issues in code review:\n- Missing null check\n- ..."`
+
+Does NOT wait for response - fire and forget.
 
 ## Interview Pattern
 
@@ -82,8 +90,10 @@ await chef.notify(`Got it: ${["React","Vue","Svelte"][stack]}, auth=${needsAuth}
 
 ## Behavior
 
-- All methods block until user responds (infinite timeout)
+- `choice`, `confirm`, `ask`: block until user responds (infinite timeout)
+- `notify`: non-blocking, returns immediately after sending
 - Choice: lists options A-Z in message, shows letter-only grid buttons
 - Confirm: Yes/No buttons, also accepts text (yes/y/ok or no/n)
 - Ask: waits for any text message
 - Edits original message with ✅ and selected answer when answered
+- Skips old messages on startup (won't reprocess previous sessions)
