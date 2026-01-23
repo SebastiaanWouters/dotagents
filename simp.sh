@@ -8,8 +8,13 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Prevent multiple instances (Telegram only allows one long-poll)
+LOCK_FILE="/tmp/simp.lock"
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "simp already running"; exit 1; }
+
 CLAUDE="claude --dangerously-skip-permissions --print"
-LOG_FILE="simp.log"
+LOG_FILE="/tmp/simp.log"
 
 log() { echo "[simp $(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
@@ -18,7 +23,7 @@ notify() {
 }
 
 ask() {
-    bun -e "import{chef}from'./skills/chef/scripts/chef.ts';console.log(await chef.ask(\`$1\`))" 2>/dev/null
+    bun -e "import{chef}from'./skills/chef/scripts/chef.ts';console.log(await chef.ask(\`$1\`))" 2>>"$LOG_FILE"
 }
 
 # --- Shared prompt section ---
