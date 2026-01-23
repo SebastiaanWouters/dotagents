@@ -1,14 +1,14 @@
 /**
  * Chef - Blocking Telegram Q&A for AI agents
  *
- * ALL methods are BLOCKING. No async/skip behavior.
+ * ALL methods are BLOCKING (except notify).
  *
  * Usage:
  *   import { chef } from "./skills/chef/scripts/chef.ts";
  *
- *   const idx = await chef.choice("Pick:", ["A", "B", "C"]);
- *   const ok = await chef.confirm("Proceed?");
  *   const text = await chef.ask("Name?");
+ *   const ok = await chef.confirm("Proceed?");
+ *   const idx = await chef.choice("Pick:", ["A", "B", "C"]);
  *   await chef.notify("Done!");
  *
  * Setup: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
@@ -193,7 +193,69 @@ class ChefClient {
     return -1;
   }
 
-  /** Multiple choice question - BLOCKING, waits for answer */
+  /** Free text question - BLOCKING */
+  async ask(question: string, timeoutMs: number = 600000): Promise<string | null> {
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
+    await this.init();
+    const msgId = await this.send(question);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      for (const u of await this.poll()) {
+        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
+          await this.editMessage(msgId, `${question}\n\n✅`);
+          return u.message.text;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Yes/No question - BLOCKING */
+  async confirm(question: string, timeoutMs: number = 600000): Promise<boolean | null> {
+    if (!question || question.trim() === "") {
+      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
+    }
+
+    await this.init();
+    const kb = { inline_keyboard: [[
+      { text: "✅ Yes", callback_data: "y" },
+      { text: "❌ No", callback_data: "n" },
+    ]]};
+    const msgId = await this.send(question, kb);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      for (const u of await this.poll()) {
+        if (u.callback_query?.message?.chat.id === this.cfg.chatId &&
+            u.callback_query.message.message_id === msgId) {
+          const d = u.callback_query.data;
+          if (d === "y" || d === "n") {
+            await this.ackCallback(u.callback_query.id);
+            await this.editMessage(msgId, `${question}\n\n✅ ${d === "y" ? "Yes" : "No"}`);
+            return d === "y";
+          }
+        }
+        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
+          const txt = u.message.text.toLowerCase().trim();
+          if (["yes", "y", "1", "ok"].includes(txt)) {
+            await this.editMessage(msgId, `${question}\n\n✅ Yes`);
+            return true;
+          }
+          if (["no", "n", "0"].includes(txt)) {
+            await this.editMessage(msgId, `${question}\n\n✅ No`);
+            return false;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Multiple choice question - BLOCKING */
   async choice(question: string, options: string[], opts: ChoiceOptions = {}): Promise<number | null> {
     const { cols = 4, timeout = 600000 } = opts;
     
@@ -246,81 +308,13 @@ class ChefClient {
     return null;
   }
 
-  /** Yes/No question - BLOCKING */
-  async confirm(question: string, timeoutMs: number = 600000): Promise<boolean | null> {
-    if (!question || question.trim() === "") {
-      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
-    }
-
-    const kb = { inline_keyboard: [[
-      { text: "✅ Yes", callback_data: "y" },
-      { text: "❌ No", callback_data: "n" },
-    ]]};
-    const msgId = await this.send(question, kb);
-    const deadline = Date.now() + timeoutMs;
-
-    while (Date.now() < deadline) {
-      for (const u of await this.poll()) {
-        if (u.callback_query?.message?.chat.id === this.cfg.chatId &&
-            u.callback_query.message.message_id === msgId) {
-          const d = u.callback_query.data;
-          if (d === "y" || d === "n") {
-            await this.ackCallback(u.callback_query.id);
-            await this.editMessage(msgId, `${question}\n\n✅ ${d === "y" ? "Yes" : "No"}`);
-            return d === "y";
-          }
-        }
-        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-          const txt = u.message.text.toLowerCase().trim();
-          if (["yes", "y", "1", "ok"].includes(txt)) {
-            await this.editMessage(msgId, `${question}\n\n✅ Yes`);
-            return true;
-          }
-          if (["no", "n", "0"].includes(txt)) {
-            await this.editMessage(msgId, `${question}\n\n✅ No`);
-            return false;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  /** Free text question - BLOCKING */
-  async ask(question: string, timeoutMs: number = 600000): Promise<string | null> {
-    if (!question || question.trim() === "") {
-      throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
-    }
-
-    const msgId = await this.send(question);
-    const deadline = Date.now() + timeoutMs;
-
-    while (Date.now() < deadline) {
-      for (const u of await this.poll()) {
-        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-          await this.editMessage(msgId, `${question}\n\n✅`);
-          return u.message.text;
-        }
-      }
-    }
-    return null;
-  }
-
-  /** Fire & forget notification */
-  async notify(message: string): Promise<void> {
-    if (!message || message.trim() === "") {
-      throw new ChefError("message cannot be empty", "EMPTY_MESSAGE");
-    }
-
-    await this.send(message);
-  }
-
   /** Collect multiple responses until stopword - BLOCKING */
   async collect(question: string, stopword: string = "lfg", timeoutMs: number = 600000, graceMs: number = 30000): Promise<{ responses: string[]; stopped: boolean; timedOut: boolean }> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
 
+    await this.init();
     const responses: string[] = [];
     const stopLower = stopword.toLowerCase();
     let deadline = Date.now() + timeoutMs;
@@ -343,145 +337,13 @@ class ChefClient {
     return { responses, stopped: false, timedOut: true };
   }
 
-  /**
-   * Send multiple questions at once, BLOCK until ALL are answered.
-   * Each question MUST include "N/A" or similar skip option as last option.
-   * 
-   * @param questions Array of {question, options} objects
-   * @param intro Optional intro message before questions
-   * @param timeoutMs Total timeout (default 10min)
-   * @returns Array of answers with indices
-   */
-  async batch(
-    questions: Array<{ question: string; options: string[] }>,
-    intro?: string,
-    timeoutMs: number = 600000
-  ): Promise<Array<{ question: string; options: string[]; answer: string; answerIndex: number }>> {
-    await this.init();
-
-    if (intro) {
-      await this.notify(intro);
+  /** Fire & forget notification */
+  async notify(message: string): Promise<void> {
+    if (!message || message.trim() === "") {
+      throw new ChefError("message cannot be empty", "EMPTY_MESSAGE");
     }
 
-    const pending: Array<{
-      question: string;
-      options: string[];
-      messageId: number;
-      answered: boolean;
-      answerIndex?: number;
-    }> = [];
-
-    for (const q of questions) {
-      const optionsList = q.options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}`).join("\n");
-      const hint = `💡 _Tap or type ${q.options.length > 1 ? `A-${this.indexToLetter(q.options.length - 1)}` : "A"}_`;
-      const fullQuestion = `${q.question}\n\n${optionsList}\n\n${hint}`;
-
-      const buttons = q.options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
-      const rows: { text: string; callback_data: string }[][] = [];
-      for (let i = 0; i < buttons.length; i += 4) {
-        rows.push(buttons.slice(i, i + 4));
-      }
-
-      const msgId = await this.send(fullQuestion, { inline_keyboard: rows });
-      pending.push({
-        question: q.question,
-        options: q.options,
-        messageId: msgId,
-        answered: false,
-      });
-    }
-
-    const remaining = () => pending.filter(p => !p.answered).length;
-    await this.notify(`📋 ${pending.length} questions above — answer all to continue`);
-
-    const deadline = Date.now() + timeoutMs;
-
-    while (remaining() > 0 && Date.now() < deadline) {
-      for (const u of await this.poll()) {
-        if (u.callback_query?.message?.chat.id === this.cfg.chatId) {
-          const msgId = u.callback_query.message.message_id;
-          const pq = pending.find(p => p.messageId === msgId && !p.answered);
-          if (pq && u.callback_query.data) {
-            const idx = parseInt(u.callback_query.data);
-            if (idx >= 0 && idx < pq.options.length) {
-              pq.answered = true;
-              pq.answerIndex = idx;
-              await this.ackCallback(u.callback_query.id);
-              await this.editMessage(msgId, `${pq.question}\n\n✅ ${this.indexToLetter(idx)}) ${pq.options[idx]}`);
-              
-              if (remaining() > 0) {
-                await this.notify(`✨ ${pending.length - remaining()}/${pending.length} done — ${remaining()} to go`);
-              }
-            }
-          }
-        }
-        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-          const txt = u.message.text.trim();
-          const letterIdx = this.letterToIndex(txt);
-          
-          const pq = pending.find(p => !p.answered && letterIdx >= 0 && letterIdx < p.options.length);
-          if (pq && letterIdx >= 0) {
-            pq.answered = true;
-            pq.answerIndex = letterIdx;
-            await this.editMessage(pq.messageId, `${pq.question}\n\n✅ ${this.indexToLetter(letterIdx)}) ${pq.options[letterIdx]}`);
-            
-            if (remaining() > 0) {
-              await this.notify(`✨ ${pending.length - remaining()}/${pending.length} done — ${remaining()} to go`);
-            }
-          }
-        }
-      }
-    }
-
-    if (remaining() > 0) {
-      await this.notify(`⏰ Timeout — ${remaining()} questions unanswered, using N/A`);
-      for (const pq of pending.filter(p => !p.answered)) {
-        pq.answered = true;
-        pq.answerIndex = pq.options.length - 1;
-      }
-    } else {
-      await this.notify(`🎉 All questions answered — LFG!`);
-    }
-
-    return pending.map(p => ({
-      question: p.question,
-      options: p.options,
-      answer: p.options[p.answerIndex!],
-      answerIndex: p.answerIndex!,
-    }));
-  }
-
-  /**
-   * Run a blocking interview with sequential questions.
-   * 
-   * @param questions Array of question configs
-   * @returns Map of question text to answer
-   */
-  async interview(
-    questions: Array<
-      | { type: "choice"; question: string; options: string[] }
-      | { type: "confirm"; question: string }
-      | { type: "ask"; question: string }
-    >
-  ): Promise<Map<string, string | boolean | number | null>> {
-    const answers = new Map<string, string | boolean | number | null>();
-
-    for (const q of questions) {
-      switch (q.type) {
-        case "choice":
-          const idx = await this.choice(q.question, q.options);
-          answers.set(q.question, idx !== null ? q.options[idx] : null);
-          break;
-        case "confirm":
-          answers.set(q.question, await this.confirm(q.question));
-          break;
-        case "ask":
-          answers.set(q.question, await this.ask(q.question));
-          break;
-      }
-    }
-
-    return answers;
+    await this.send(message);
   }
 }
 
@@ -490,13 +352,11 @@ export { ChefClient, ChefError };
 
 if (import.meta.main) {
   console.log("Chef - Blocking Telegram Q&A for user interviews\n");
-  console.log("ALL methods are BLOCKING. No async/skip behavior.\n");
+  console.log("ALL methods are BLOCKING (except notify).\n");
   console.log("API:");
-  console.log("  chef.choice(q, opts, {cols,timeout})      → index|null (BLOCKING)");
-  console.log("  chef.confirm(q, timeout?)                 → boolean|null (BLOCKING)");
-  console.log("  chef.ask(q, timeout?)                     → string|null (BLOCKING)");
-  console.log("  chef.collect(q, stopword?, timeout?)      → {responses[], stopped, timedOut} (BLOCKING)");
-  console.log("  chef.batch(questions[], intro?)           → answers[] (BLOCKING until ALL answered)");
-  console.log("  chef.interview(questions[])               → Map (BLOCKING sequential)");
+  console.log("  chef.ask(q, timeout?)                     → string|null");
+  console.log("  chef.confirm(q, timeout?)                 → boolean|null");
+  console.log("  chef.choice(q, opts, {cols,timeout})      → index|null");
+  console.log("  chef.collect(q, stopword?, timeout?)      → {responses[], stopped, timedOut}");
   console.log("  chef.notify(msg)                          → void (fire & forget)");
 }

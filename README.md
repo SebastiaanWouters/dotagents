@@ -21,6 +21,7 @@ npx add-skills sebastiaanwouters/dotagents
 | `ticket` | Ticket management via `tk` CLI |
 | `bullet-tracer` | Implementation approach (vertical slices) |
 | `mise-en-place` | Setup phase: idea → spec → tickets (runs if no tickets exist) |
+| `agents-md` | Initialize AGENTS.md with project guidelines |
 
 ### Required Tools
 
