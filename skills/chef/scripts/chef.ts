@@ -1,6 +1,8 @@
 /**
  * Chef - Blocking Telegram Q&A for AI agents
  *
+ * ALL methods are BLOCKING. No async/skip behavior.
+ *
  * Usage:
  *   import { chef } from "./skills/chef/scripts/chef.ts";
  *
@@ -119,19 +121,7 @@ async function call<T>(api: string, method: string, body?: object): Promise<T> {
   return json.result as T;
 }
 
-interface PendingQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  recommended: number;
-  messageId: number;
-  answered: boolean;
-  answer?: number;
-}
-
 interface ChoiceOptions {
-  blocking?: boolean;
-  recommended?: number;
   cols?: number;
   timeout?: number;
 }
@@ -140,97 +130,17 @@ class ChefClient {
   private cfg = getConfig();
   private offset = 0;
   private initialized = false;
-  private checkpoint = 0;
-  private pendingQuestions: PendingQuestion[] = [];
-  private questionCounter = 0;
 
   private async init(): Promise<void> {
     if (this.initialized) return;
-    // Fetch latest update_id to skip old messages
     const updates = await call<Update[]>(this.cfg.api, "getUpdates", {
       offset: -1,
       limit: 1,
     });
     if (updates.length > 0) {
       this.offset = updates[0].update_id;
-      this.checkpoint = this.offset;
     }
     this.initialized = true;
-  }
-
-  /** Mark current position - gather() will collect messages after this point */
-  async mark(): Promise<void> {
-    await this.init();
-    this.checkpoint = this.offset;
-    this.pendingQuestions = [];
-  }
-
-  /** Gather all messages and resolve pending questions - non-blocking */
-  async gather(): Promise<{
-    messages: string[];
-    questions: Array<{ question: string; options: string[]; answer: string; wasAnswered: boolean }>;
-  }> {
-    await this.init();
-    const messages: string[] = [];
-    
-    // Get all pending updates without long polling
-    const updates = await call<Update[]>(this.cfg.api, "getUpdates", {
-      offset: this.checkpoint + 1,
-      timeout: 0,
-      allowed_updates: ["message", "callback_query"],
-    });
-    
-    for (const u of updates) {
-      // Check for callback answers to pending questions
-      if (u.callback_query?.message?.chat.id === this.cfg.chatId) {
-        const msgId = u.callback_query.message.message_id;
-        const pq = this.pendingQuestions.find(q => q.messageId === msgId && !q.answered);
-        if (pq && u.callback_query.data) {
-          const idx = parseInt(u.callback_query.data);
-          if (idx >= 0 && idx < pq.options.length) {
-            pq.answered = true;
-            pq.answer = idx;
-            await this.ackCallback(u.callback_query.id);
-            await this.editMessage(msgId, `${pq.question}\n\n✅ ${this.indexToLetter(idx)}) ${pq.options[idx]}`);
-          }
-        }
-      }
-      // Check for text answers (letter response)
-      if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
-        const txt = u.message.text.trim();
-        const letterIdx = this.letterToIndex(txt);
-        
-        // Try to match to unanswered question
-        const pq = this.pendingQuestions.find(q => !q.answered && letterIdx >= 0 && letterIdx < q.options.length);
-        if (pq && letterIdx >= 0) {
-          pq.answered = true;
-          pq.answer = letterIdx;
-          await this.editMessage(pq.messageId, `${pq.question}\n\n✅ ${this.indexToLetter(letterIdx)}) ${pq.options[letterIdx]}`);
-        } else {
-          // Regular message, not a question answer
-          messages.push(txt);
-        }
-      }
-      this.offset = u.update_id;
-    }
-    
-    // Resolve all pending questions (use recommended for unanswered)
-    const questions = this.pendingQuestions.map(pq => ({
-      question: pq.question,
-      options: pq.options,
-      answer: pq.options[pq.answered ? pq.answer! : pq.recommended],
-      wasAnswered: pq.answered,
-    }));
-    
-    // Update checkpoint so subsequent gather() won't re-process
-    this.checkpoint = this.offset;
-    
-    return { messages, questions };
-  }
-
-  /** @deprecated Use choice() with { blocking: false } instead */
-  async question(question: string, options: string[], recommended: number = 0): Promise<void> {
-    return this.choice(question, options, { blocking: false, recommended });
   }
 
   private async send(text: string, keyboard?: object): Promise<number> {
@@ -283,9 +193,9 @@ class ChefClient {
     return -1;
   }
 
-  /** Multiple choice question - blocking by default, or non-blocking with { blocking: false } */
-  async choice(question: string, options: string[], opts: ChoiceOptions = {}): Promise<number | null | void> {
-    const { blocking = true, recommended = 0, cols = 4, timeout = 600000 } = opts;
+  /** Multiple choice question - BLOCKING, waits for answer */
+  async choice(question: string, options: string[], opts: ChoiceOptions = {}): Promise<number | null> {
+    const { cols = 4, timeout = 600000 } = opts;
     
     if (!options || options.length === 0) {
       throw new ChefError("choice() requires at least one option", "INVALID_OPTIONS");
@@ -296,19 +206,11 @@ class ChefClient {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
-    
-    const safeRecommended = recommended < 0 || recommended >= options.length ? 0 : recommended;
 
     await this.init();
 
-    const optionsList = blocking
-      ? options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}`).join("\n")
-      : options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}${i === safeRecommended ? " ⭐" : ""}`).join("\n");
-    
-    const hint = blocking
-      ? `💡 _Tap a button or type ${options.length > 1 ? `A-${this.indexToLetter(options.length - 1)}` : "A"}_`
-      : `💡 _Tap or ignore (default: ${this.indexToLetter(safeRecommended)})_`;
-    
+    const optionsList = options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}`).join("\n");
+    const hint = `💡 _Tap a button or type ${options.length > 1 ? `A-${this.indexToLetter(options.length - 1)}` : "A"}_`;
     const fullQuestion = `${question}\n\n${optionsList}\n\n${hint}`;
 
     const buttons = options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
@@ -318,19 +220,6 @@ class ChefClient {
     }
 
     const msgId = await this.send(fullQuestion, { inline_keyboard: rows });
-
-    if (!blocking) {
-      this.pendingQuestions.push({
-        id: ++this.questionCounter,
-        question,
-        options,
-        recommended: safeRecommended,
-        messageId: msgId,
-        answered: false,
-      });
-      return;
-    }
-
     const deadline = Date.now() + timeout;
 
     while (Date.now() < deadline) {
@@ -357,6 +246,7 @@ class ChefClient {
     return null;
   }
 
+  /** Yes/No question - BLOCKING */
   async confirm(question: string, timeoutMs: number = 600000): Promise<boolean | null> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
@@ -396,6 +286,7 @@ class ChefClient {
     return null;
   }
 
+  /** Free text question - BLOCKING */
   async ask(question: string, timeoutMs: number = 600000): Promise<string | null> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
@@ -415,6 +306,7 @@ class ChefClient {
     return null;
   }
 
+  /** Fire & forget notification */
   async notify(message: string): Promise<void> {
     if (!message || message.trim() === "") {
       throw new ChefError("message cannot be empty", "EMPTY_MESSAGE");
@@ -423,6 +315,7 @@ class ChefClient {
     await this.send(message);
   }
 
+  /** Collect multiple responses until stopword - BLOCKING */
   async collect(question: string, stopword: string = "lfg", timeoutMs: number = 600000, graceMs: number = 30000): Promise<{ responses: string[]; stopped: boolean; timedOut: boolean }> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
@@ -449,6 +342,147 @@ class ChefClient {
     }
     return { responses, stopped: false, timedOut: true };
   }
+
+  /**
+   * Send multiple questions at once, BLOCK until ALL are answered.
+   * Each question MUST include "N/A" or similar skip option as last option.
+   * 
+   * @param questions Array of {question, options} objects
+   * @param intro Optional intro message before questions
+   * @param timeoutMs Total timeout (default 10min)
+   * @returns Array of answers with indices
+   */
+  async batch(
+    questions: Array<{ question: string; options: string[] }>,
+    intro?: string,
+    timeoutMs: number = 600000
+  ): Promise<Array<{ question: string; options: string[]; answer: string; answerIndex: number }>> {
+    await this.init();
+
+    if (intro) {
+      await this.notify(intro);
+    }
+
+    const pending: Array<{
+      question: string;
+      options: string[];
+      messageId: number;
+      answered: boolean;
+      answerIndex?: number;
+    }> = [];
+
+    for (const q of questions) {
+      const optionsList = q.options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}`).join("\n");
+      const hint = `💡 _Tap or type ${q.options.length > 1 ? `A-${this.indexToLetter(q.options.length - 1)}` : "A"}_`;
+      const fullQuestion = `${q.question}\n\n${optionsList}\n\n${hint}`;
+
+      const buttons = q.options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
+      const rows: { text: string; callback_data: string }[][] = [];
+      for (let i = 0; i < buttons.length; i += 4) {
+        rows.push(buttons.slice(i, i + 4));
+      }
+
+      const msgId = await this.send(fullQuestion, { inline_keyboard: rows });
+      pending.push({
+        question: q.question,
+        options: q.options,
+        messageId: msgId,
+        answered: false,
+      });
+    }
+
+    const remaining = () => pending.filter(p => !p.answered).length;
+    await this.notify(`📋 ${pending.length} questions above — answer all to continue`);
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (remaining() > 0 && Date.now() < deadline) {
+      for (const u of await this.poll()) {
+        if (u.callback_query?.message?.chat.id === this.cfg.chatId) {
+          const msgId = u.callback_query.message.message_id;
+          const pq = pending.find(p => p.messageId === msgId && !p.answered);
+          if (pq && u.callback_query.data) {
+            const idx = parseInt(u.callback_query.data);
+            if (idx >= 0 && idx < pq.options.length) {
+              pq.answered = true;
+              pq.answerIndex = idx;
+              await this.ackCallback(u.callback_query.id);
+              await this.editMessage(msgId, `${pq.question}\n\n✅ ${this.indexToLetter(idx)}) ${pq.options[idx]}`);
+              
+              if (remaining() > 0) {
+                await this.notify(`✨ ${pending.length - remaining()}/${pending.length} done — ${remaining()} to go`);
+              }
+            }
+          }
+        }
+        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
+          const txt = u.message.text.trim();
+          const letterIdx = this.letterToIndex(txt);
+          
+          const pq = pending.find(p => !p.answered && letterIdx >= 0 && letterIdx < p.options.length);
+          if (pq && letterIdx >= 0) {
+            pq.answered = true;
+            pq.answerIndex = letterIdx;
+            await this.editMessage(pq.messageId, `${pq.question}\n\n✅ ${this.indexToLetter(letterIdx)}) ${pq.options[letterIdx]}`);
+            
+            if (remaining() > 0) {
+              await this.notify(`✨ ${pending.length - remaining()}/${pending.length} done — ${remaining()} to go`);
+            }
+          }
+        }
+      }
+    }
+
+    if (remaining() > 0) {
+      await this.notify(`⏰ Timeout — ${remaining()} questions unanswered, using N/A`);
+      for (const pq of pending.filter(p => !p.answered)) {
+        pq.answered = true;
+        pq.answerIndex = pq.options.length - 1;
+      }
+    } else {
+      await this.notify(`🎉 All questions answered — LFG!`);
+    }
+
+    return pending.map(p => ({
+      question: p.question,
+      options: p.options,
+      answer: p.options[p.answerIndex!],
+      answerIndex: p.answerIndex!,
+    }));
+  }
+
+  /**
+   * Run a blocking interview with sequential questions.
+   * 
+   * @param questions Array of question configs
+   * @returns Map of question text to answer
+   */
+  async interview(
+    questions: Array<
+      | { type: "choice"; question: string; options: string[] }
+      | { type: "confirm"; question: string }
+      | { type: "ask"; question: string }
+    >
+  ): Promise<Map<string, string | boolean | number | null>> {
+    const answers = new Map<string, string | boolean | number | null>();
+
+    for (const q of questions) {
+      switch (q.type) {
+        case "choice":
+          const idx = await this.choice(q.question, q.options);
+          answers.set(q.question, idx !== null ? q.options[idx] : null);
+          break;
+        case "confirm":
+          answers.set(q.question, await this.confirm(q.question));
+          break;
+        case "ask":
+          answers.set(q.question, await this.ask(q.question));
+          break;
+      }
+    }
+
+    return answers;
+  }
 }
 
 export const chef = new ChefClient();
@@ -456,14 +490,13 @@ export { ChefClient, ChefError };
 
 if (import.meta.main) {
   console.log("Chef - Blocking Telegram Q&A for user interviews\n");
+  console.log("ALL methods are BLOCKING. No async/skip behavior.\n");
   console.log("API:");
-  console.log("  chef.mark()                              → void (checkpoint, clears pending questions)");
-  console.log("  chef.gather()                            → {messages[], questions[]} (non-blocking)");
-  console.log("  chef.choice(q, opts, {blocking,recommended,cols,timeout})");
-  console.log("                                           → index|null (blocking, default)");
-  console.log("                                           → void (non-blocking, resolved by gather)");
-  console.log("  chef.confirm(q, timeout?)                → boolean|null (blocking Yes/No, 10min default)");
-  console.log("  chef.ask(q, timeout?)                    → string|null (blocking free text, 10min default)");
-  console.log("  chef.collect(q, stopword?, timeout?, grace?) → {responses[], stopped, timedOut} (10min default, 30s grace)");
-  console.log("  chef.notify(msg)                         → void (fire & forget)");
+  console.log("  chef.choice(q, opts, {cols,timeout})      → index|null (BLOCKING)");
+  console.log("  chef.confirm(q, timeout?)                 → boolean|null (BLOCKING)");
+  console.log("  chef.ask(q, timeout?)                     → string|null (BLOCKING)");
+  console.log("  chef.collect(q, stopword?, timeout?)      → {responses[], stopped, timedOut} (BLOCKING)");
+  console.log("  chef.batch(questions[], intro?)           → answers[] (BLOCKING until ALL answered)");
+  console.log("  chef.interview(questions[])               → Map (BLOCKING sequential)");
+  console.log("  chef.notify(msg)                          → void (fire & forget)");
 }

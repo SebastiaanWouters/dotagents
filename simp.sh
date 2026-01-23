@@ -4,7 +4,35 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 flock -n /tmp/simp.lock -c 'true' || { echo "simp already running"; exit 1; }
 
-mkdir -p .tickets docs
+mkdir -p docs
+
+# === SETUP PHASE: If no tickets exist, run mise-en-place first ===
+if [[ ! -d ".tickets" ]] || [[ -z "$(ls -A .tickets 2>/dev/null)" ]]; then
+    echo "[simp] No tickets found. Starting mise-en-place setup..."
+    
+    SETUP_PROMPT='You are starting a new project with no tickets yet.
+
+FIRST:
+1. Read AGENTS.md file
+2. Load "compound" skill → run "compound store" to initialize docs/ structure if empty
+3. Load "chef" skill
+4. Load "mise-en-place" skill
+
+THEN:
+- Notify user via chef: "🍳 No tickets found! Let'\''s cook up a plan..."
+- Run the full mise-en-place process:
+  1. Discovery phase: interview user about their idea via chef
+  2. Generate SPEC.md from answers
+  3. Decomposition phase: create granular tickets with dependencies
+- After tickets are created, notify user and exit
+
+This setup only runs once. After tickets exist, the main loop takes over.'
+
+    echo "$SETUP_PROMPT" | amp --dangerously-allow-all -x 2>&1
+    
+    echo "[simp] Setup complete. Restarting to enter main loop..."
+    sleep 2
+fi
 
 MAX_ITERATIONS=100
 ITERATION=1
@@ -17,7 +45,7 @@ COMMUNICATION STYLE:
 
 FIRST (before any other work):
 1. Read AGENTS.md file — follow all guidelines strictly
-2. Read docs/knowledge.md — understand project context, decisions, and accumulated learnings
+2. Load "compound" skill → run "compound retrieve" for current ticket context
 3. Load "chef" skill — ALL user communication MUST use chef (never stdout)
 4. Load "ticket" skill
 5. Check `tk ready --limit 1` for next ticket
@@ -43,7 +71,7 @@ QA PHASE:
 - Notify user: brief summary of what was done
 
 LAST (before ending iteration):
-- Update docs/knowledge.md with any learnings, decisions, gotchas, or remarks NOT found directly in code comments
+- Run "compound store" — persist learnings not captured in code (see compound skill for rules)
 
 AFTER TICKET (or if no tickets):
 - chef.gather() — get messages + resolve questions from QA phase

@@ -1,11 +1,11 @@
 ---
 name: chef
-description: Telegram communication for AI agents. Supports blocking questions, non-blocking questions with defaults, and async message gathering. Use for user interviews, status updates, and feedback collection.
+description: Telegram communication for AI agents. ALL methods are BLOCKING. Use for user interviews, status updates, and feedback collection.
 ---
 
 # Chef 👨‍🍳
 
-Your witty Telegram sous-chef. Blocking and non-blocking communication.
+Your witty Telegram sous-chef. **ALL methods are BLOCKING.**
 
 ## Personality
 
@@ -19,9 +19,6 @@ Be funny, concise, smart. Use emojis liberally. Examples:
 
 - ❌ "Build passed. Deploying to staging."
 - ✅ "🎉 Build passed! Shipping to staging... 🚢"
-
-- ❌ "Found 5 issues in code review"
-- ✅ "👀 Review done — 5 spicy takes incoming"
 
 Keep it punchy. One-liners > paragraphs.
 
@@ -38,33 +35,34 @@ TELEGRAM_CHAT_ID=xxx
 ```typescript
 import { chef } from "./skills/chef/scripts/chef.ts";
 
-// Mark checkpoint - gather() will collect messages/answers after this point
-await chef.mark();
-
-// Multiple choice - blocking by default
+// Multiple choice - BLOCKING, waits for answer
 await chef.choice("🛠️ Stack?", ["React", "Vue", "Svelte"]); // returns index|null
 
-// Multiple choice - non-blocking (answer via gather())
-// ⭐ marks recommended option, shown to user
-await chef.choice("🎨 Color?", ["Dark", "Light", "Auto"], { blocking: false, recommended: 0 });
+// Yes/No - BLOCKING
+await chef.confirm("🚀 Ship it?"); // returns boolean|null
 
-// Gather messages + resolve pending questions - NON-BLOCKING
-const { messages, questions } = await chef.gather();
-// messages: string[] - free text from user
-// questions: { question, options, answer, wasAnswered }[]
+// Free text - BLOCKING
+await chef.ask("📛 Project name?"); // returns string|null
 
-// Blocking Yes/No → returns boolean|null (null on timeout)
-await chef.confirm("🚀 Ship it?");
+// Collect multiple responses until stopword - BLOCKING
+await chef.collect("Any remarks?", "lfg", 60000); // returns {responses[], stopped, timedOut}
 
-// Blocking free text → returns string|null (null on timeout)
-await chef.ask("📛 Project name?");
+// Batch questions - BLOCKS until ALL answered (N/A always last option!)
+const answers = await chef.batch([
+  { question: "🖥️ Platform?", options: ["Web", "Mobile", "Desktop", "N/A"] },
+  { question: "🔐 Auth?", options: ["None", "Simple", "OAuth", "N/A"] },
+], "🍳 Quick setup questions:");
+// answers: [{ question, options, answer, answerIndex }]
 
-// Collect multiple responses until stopword → returns {responses[], stopped, timedOut}
-await chef.collect("Any remarks?", "lfg", 60000); // 1min timeout
+// Sequential interview - BLOCKING each question
+const results = await chef.interview([
+  { type: "ask", question: "📛 Project name?" },
+  { type: "choice", question: "🎯 Scope?", options: ["MVP", "V1", "Full"] },
+  { type: "confirm", question: "🚀 Ready to start?" },
+]);
+// results.get("📛 Project name?") → "MyApp"
 
-// All blocking methods have 10min default timeout
-
-// Fire & forget notification
+// Fire & forget notification (only non-blocking method)
 await chef.notify("🎬 Lights, camera, coding!");
 ```
 
@@ -85,30 +83,34 @@ await chef.notify("✅ #42 complete! Auth added 🔐 | 2 bugs obliterated 💥 |
 const stack = await chef.choice("🍽️ What's cooking?", ["React", "Vue", "Svelte"]);
 const auth = await chef.confirm("🔐 Need auth?");
 const name = await chef.ask("📛 Name this beast?");
-await chef.notify(`🧾 Order up: ${name} w/ ${["React","Vue","Svelte"][stack]}${auth ? " + auth 🔒" : ""}`);
+await chef.notify(`🧾 Order up: ${name} w/ ${["React","Vue","Svelte"][stack!]}${auth ? " + auth 🔒" : ""}`);
 ```
 
-**Non-blocking questions with gather:**
+**Batch questions (mise-en-place style):**
 ```typescript
-await chef.mark();
-await chef.choice("🎨 Style?", ["Dark", "Light"], { blocking: false, recommended: 0 }); // ⭐ on Dark
-await chef.choice("📍 Where?", ["Top", "Bottom"], { blocking: false, recommended: 1 });
+// All questions sent at once, BLOCKS until ALL answered
+// N/A is always last option - allows user to "skip" without breaking flow
+const techStack = await chef.batch([
+  { question: "⚛️ Frontend?", options: ["React", "Vue", "Svelte", "N/A"] },
+  { question: "🎨 UI lib?", options: ["Tailwind", "shadcn", "MUI", "N/A"] },
+  { question: "🗄️ Database?", options: ["PostgreSQL", "SQLite", "MongoDB", "N/A"] },
+], "🔧 Tech stack questions...");
 
-// ... do work while user may or may not respond ...
-
-const { messages, questions } = await chef.gather();
-// messages: free text user sent
-// questions: [{ question, options, answer, wasAnswered }]
-// wasAnswered=false → recommended/default was used
+// Progress shown: "✨ 2/3 done — 1 to go"
+// Final: "🎉 All questions answered — LFG!"
 ```
 
 ## Rules
 
-- `choice()` → blocking by default, non-blocking with `{ blocking: false }`
-- `confirm`, `ask` → blocks until human responds
-- `notify` → fire & forget, no waiting
+- `choice()` → BLOCKING, waits for answer
+- `batch()` → BLOCKING, waits until ALL questions answered
+- `confirm()` → BLOCKING, waits for Yes/No
+- `ask()` → BLOCKING, waits for free text
+- `collect()` → BLOCKING, waits for stopword
+- `interview()` → BLOCKING, sequential questions
+- `notify()` → fire & forget (only non-blocking method)
+- **batch() questions MUST have N/A as last option** — convention for "skip"
 - **NEVER use `ask()` for questions with options** → use `choice()` instead
-- **Any question with predefined options MUST use `choice()`**
 - Always use emojis in messages
 - Keep notifications under 280 chars (tweet-sized)
 - Be clever, not cringe
