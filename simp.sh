@@ -4,88 +4,84 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 flock -n /tmp/simp.lock -c 'true' || { echo "simp already running"; exit 1; }
 
-# Initialize tickets directory if not present
-mkdir -p .tickets
+mkdir -p .tickets docs
 
-run_amp() {
-    if ! amp --dangerously-allow-all -x "$1"; then
-        echo "[simp] amp exited with error, continuing..."
-    fi
-}
+MAX_ITERATIONS=100
+ITERATION=1
 
-ticket=$(tk ready --limit 1 2>/dev/null | awk 'NR==1{print $1}') || true
+PROMPT='CRITICAL INSTRUCTIONS — Follow exactly:
 
-KNOWLEDGE_PREAMBLE="
-FIRST: Read and internalize docs/KNOWLEDGE.md and AGENTS.md before starting.
+COMMUNICATION STYLE:
+- Notify user via chef at key moments: starting ticket, completion, and any blockers
+- Keep messages concise but informative
 
-"
+FIRST (before any other work):
+1. Read AGENTS.md file — follow all guidelines strictly
+2. Read docs/knowledge.md — understand project context, decisions, and accumulated learnings
+3. Load "chef" skill — ALL user communication MUST use chef (never stdout)
+4. Load "ticket" skill
+5. Check `tk ready --limit 1` for next ticket
 
-KNOWLEDGE_EPILOGUE="
+IF TICKET EXISTS:
+- chef.mark() — checkpoint for gathering feedback + questions
+- Notify user: which ticket you are starting and your approach
+- Load "bullet-tracer" skill
+- During implementation: use chef.choice() with { blocking: false, recommended: N } for non-blocking clarifying questions
+- Implement ONLY that ticket using bullet tracer approach
 
-FINALLY: Before finishing, update docs/KNOWLEDGE.md with any new learnings:
-- Only add knowledge NOT already in code/commits
-- Use file references (path/to/file#L10-20) instead of verbose content
-- Keep sections concise, delete stale entries
-"
+AFTER IMPLEMENTATION (before QA):
+- chef.gather() — returns { messages[], questions[] }
+- ACT DIRECTLY on messages: fix code, adjust implementation, address concerns
+- Use question answers (wasAnswered=false means default/recommended was used)
+- chef.mark() — new checkpoint for QA phase
 
-if [[ -n "$ticket" ]]; then
-    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🎬 Simp online! Starting ticket $ticket — LFG!'
+QA PHASE:
+- Can use chef.choice() with { blocking: false } for non-blocking questions during QA too
+- Run project QA checks (lint, typecheck, tests) — all must pass
+- Commit and push after verification
+- `tk close <id>`
+- Notify user: brief summary of what was done
 
-Use recursive-handoff skill to process tickets until all done, then ask user what's next.
+LAST (before ending iteration):
+- Update docs/knowledge.md with any learnings, decisions, gotchas, or remarks NOT found directly in code comments
 
-LOOP FLOW:
-1. Check for ready tickets with 'tk ready --limit 1'
-2. IF TICKET EXISTS:
-   - tk show <ticket> to read it
-   - Implement autonomously with tests
-   - Use amp-review skill, fix all issues
-   - Commit and push
-   - tk close <ticket>
-   - Use chef to notify completion with witty summary
-   - Update docs/KNOWLEDGE.md
-   - Use recursive-handoff to continue (fresh context for next ticket)
+AFTER TICKET (or if no tickets):
+- chef.gather() — get messages + resolve questions from QA phase
+- chef.collect("✅ Done! Any remarks or additional work?", "lfg", 60000) — 1min timeout
+- Combine: gathered messages + collect responses
 
-3. IF NO TICKETS:
-   - Use chef to ask user what to work on next
-   - If NEGATIVE response (nothing/enough/done/stop/no/nope/quit/exit):
-     - Use chef: '👋 Alright, signing off! Ping me when you need me.'
-     - EXIT (finish condition met)
-   - If POSITIVE response (task/idea/description):
-     - Use chef: '👍 Got it! On it...'
-     - Implement request, ask chef questions if needed
-     - Use chef to send witty completion summary
-     - Update docs/KNOWLEDGE.md
-     - Use recursive-handoff to continue (fresh context)
+Stopword is "lfg" (case-insensitive exact match: LFG/lfg both work).
 
-Current ticket to start: $ticket
-${KNOWLEDGE_EPILOGUE}"
-else
-    run_amp "${KNOWLEDGE_PREAMBLE}Use chef skill to notify: '🔍 Simp checking in!'
+IF user provided any feedback (gathered messages or collected responses):
+- Convert ALL feedback into complete tickets using ticket skill
+- Notify user via chef about created tickets
 
-Use recursive-handoff skill to loop continuously.
+Then let the iteration end naturally. The bash script handles looping and checks for remaining tickets.'
 
-LOOP FLOW:
-1. Check for ready tickets with 'tk ready --limit 1'
-2. IF TICKET EXISTS:
-   - tk show <ticket> to read it
-   - Implement autonomously with tests
-   - Use amp-review skill, fix all issues
-   - Commit and push
-   - tk close <ticket>
-   - Use chef to notify completion with witty summary
-   - Update docs/KNOWLEDGE.md
-   - Use recursive-handoff to continue (fresh context for next ticket)
+echo "[simp] Starting loop (max $MAX_ITERATIONS iterations)"
 
-3. IF NO TICKETS:
-   - Use chef to ask user what to work on next
-   - If NEGATIVE response (nothing/enough/done/stop/no/nope/quit/exit):
-     - Use chef: '👋 Alright, signing off! Ping me when you need me.'
-     - EXIT (finish condition met)
-   - If POSITIVE response (task/idea/description):
-     - Use chef: '👍 Got it! On it...'
-     - Implement request, ask chef questions if needed
-     - Use chef to send witty completion summary
-     - Update docs/KNOWLEDGE.md
-     - Use recursive-handoff to continue (fresh context)
-${KNOWLEDGE_EPILOGUE}"
+READY=$(tk ready --limit 1 2>/dev/null | head -1) || true
+if [[ -z "$READY" ]]; then
+    echo "[simp] No tickets ready. Exiting."
+    exit 0
 fi
+
+while [[ $ITERATION -le $MAX_ITERATIONS ]]; do
+    echo "[simp] === Iteration $ITERATION ==="
+    
+    OUTPUT_FILE=$(mktemp)
+    trap "rm -f $OUTPUT_FILE" EXIT
+    
+    echo "$PROMPT" | amp --dangerously-allow-all -x 2>&1 | tee "$OUTPUT_FILE"
+    
+    READY=$(tk ready --limit 1 2>/dev/null | head -1) || true
+    if [[ -z "$READY" ]]; then
+        echo "[simp] No more tickets. Exiting."
+        break
+    fi
+    
+    ITERATION=$((ITERATION + 1))
+    sleep 2
+done
+
+echo "[simp] Finished after $ITERATION iteration(s)."

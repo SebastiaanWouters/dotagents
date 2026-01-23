@@ -7,106 +7,76 @@ description: Manage tickets with tk CLI. Triggers on "create ticket", "list tick
 
 ## Installation
 
-If `tk` is not available (`which tk` returns nothing), install from: `wedow/ticket`
-
 ```bash
 go install github.com/wedow/ticket/cmd/tk@latest
 ```
 
-Minimal ticket system with dependency tracking. Tickets stored as markdown in `.tickets/`.
+Tickets stored as markdown in `.tickets/`. Works from any subdirectory.
 
-Works from any subdirectory—walks parent directories to find `.tickets/`.
+## What Makes a Complete Ticket
+
+**A ticket MUST have ALL of:**
+
+1. **Clear Acceptance Criteria** — Specific, testable "done" conditions
+   - ✅ "User can login with email/password and receives JWT"
+   - ❌ "Login works"
+
+2. **Clear Requirements** — What exactly to build
+   - ✅ "POST /api/login accepts {email, password}, returns {token, expiresAt}"
+   - ❌ "Add login endpoint"
+
+3. **Design/UI Info** (if applicable) — Visual specs, layouts
+   - ✅ "Login form: email input, password input, submit button. Error in red below form."
+
+4. **Atomic + Actionable** — One focused task, can start immediately
+   - ✅ "Implement password reset email"
+   - ❌ "Improve auth system"
+
+5. **Testing Requirements** — What to test
+   - ✅ "Test: valid login→200+token, invalid→401, missing fields→400"
+
+**Ask yourself:** Can someone implement this without clarifying questions?
 
 ## Quick Reference
 
 | Command | Purpose |
 |---------|---------|
 | `tk create "title"` | Create ticket |
-| `tk ls` / `tk list` | List all tickets |
-| `tk ready` | Tickets ready to work on (deps resolved) |
-| `tk blocked` | Tickets waiting on dependencies |
-| `tk closed` | Recently closed tickets |
-| `tk show <id>` | View ticket details |
+| `tk ls` | List all |
+| `tk ready` | Ready to work (deps resolved) |
+| `tk blocked` | Waiting on deps |
+| `tk show <id>` | View details |
 | `tk edit <id>` | Open in $EDITOR |
-| `tk start <id>` | Mark in progress |
-| `tk close <id>` | Close ticket |
-| `tk reopen <id>` | Reopen ticket |
+| `tk start/close/reopen <id>` | Change status |
 | `tk dep <id> <dep-id>` | Add dependency |
-| `tk dep tree <id>` | Show dependency tree |
-| `tk dep cycle` | Detect dependency cycles |
-| `tk undep <id> <dep-id>` | Remove dependency |
-| `tk link <id> <id>...` | Link related tickets (symmetric) |
-| `tk unlink <id> <id>` | Remove link |
-| `tk add-note <id> "text"` | Append timestamped note |
-| `tk query [jq-filter]` | Output as JSON |
+| `tk dep tree <id>` | Show dep tree |
+| `tk undep <id> <dep-id>` | Remove dep |
+| `tk link <id> <id>...` | Link related |
+| `tk add-note <id> "text"` | Append note |
 
 Supports partial ID matching: `tk show 5c4` matches `nw-5c46`.
 
-## Creating Tickets
+## Creating Complete Tickets
 
 ```bash
-tk create "Implement auth" -t feature -p 1 \
-  --acceptance "Users can login" --tags ui,backend
+tk create "Implement JWT login" -t feature -p 1 \
+  --description "POST /api/login validates creds, returns JWT with 24h expiry" \
+  --acceptance "- Valid creds → 200 + {token, expiresAt}
+- Invalid password → 401
+- Missing fields → 400
+- Token expires in 24h" \
+  --tags backend,auth
 ```
 
-Options:
-- `-t, --type`: bug, feature, task, epic, chore (default: task)
-- `-p, --priority`: 0-4, 0=highest (default: 2)
-- `-d, --description`: Detailed description
-- `--acceptance`: Acceptance criteria (see below)
-- `--design`: Design/implementation notes
-- `-a, --assignee`: Who owns it
-- `--parent`: Parent ticket ID
-- `--tags`: Comma-separated tags
-- `--external-ref`: External tracker link (gh-123, JIRA-456)
-
-## Acceptance Criteria
-
-**Always include acceptance criteria.** This defines "done" and prevents ambiguity.
-
-```bash
-tk create "User settings page" --acceptance "- User can change password
-- User can update email
-- Changes persist after logout"
-```
-
-Before closing a ticket:
-1. `tk show <id>` — review acceptance criteria
-2. Verify each criterion is satisfied
-3. `tk close <id>`
-
-## Filtering
-
-```bash
-tk ls -T urgent           # by tag
-tk ls --status=open       # by status
-tk ready -T backend
-tk closed --limit=50
-```
+Options: `-t` type (bug/feature/task/epic/chore), `-p` priority (0-4), `-d` description, `--acceptance`, `--design`, `-a` assignee, `--parent`, `--tags`
 
 ## Dependencies
 
 ```bash
 tk dep ticket-a ticket-b      # a depends on b
 tk dep tree ticket-a          # view tree
-tk dep tree --full ticket-a   # show duplicates
 tk undep ticket-a ticket-b    # remove
 tk dep cycle                  # find cycles
-```
-
-## Linked Tickets
-
-Symmetric relationships (no blocking):
-```bash
-tk link ticket-a ticket-b ticket-c
-tk unlink ticket-a ticket-b
-```
-
-## Notes
-
-```bash
-tk add-note <id> "Found edge case"
-echo "Deploy complete" | tk add-note <id>
 ```
 
 ## Workflow
@@ -119,7 +89,6 @@ tk create "Login endpoint" --parent auth-7f3a \
 
 tk dep log-9d4e sch-2b1c   # login depends on schema
 tk ready                   # shows sch-2b1c
-tk start sch-2b1c
 tk close sch-2b1c
 tk ready                   # now shows log-9d4e
 ```

@@ -1,13 +1,11 @@
 ---
 name: chef
-description: Conducts user interviews via Telegram. Sends blocking questions with inline buttons, waits for response. Supports sending AND receiving screenshots/images. Use for gathering requirements, confirmations, or free-text input during agent tasks.
+description: Telegram communication for AI agents. Supports blocking questions, non-blocking questions with defaults, and async message gathering. Use for user interviews, status updates, and feedback collection.
 ---
 
 # Chef 👨‍🍳
 
-Your witty Telegram sous-chef. Blocks until the human responds.
-
-> 📸 **Photo support**: Send screenshots TO user (`sendPhoto`) or request screenshots FROM user (`askPhoto`)
+Your witty Telegram sous-chef. Blocking and non-blocking communication.
 
 ## Personality
 
@@ -40,24 +38,34 @@ TELEGRAM_CHAT_ID=xxx
 ```typescript
 import { chef } from "./skills/chef/scripts/chef.ts";
 
-// Multiple choice → returns index
-await chef.choice("🛠️ Stack?", ["React", "Vue", "Svelte"]);
+// Mark checkpoint - gather() will collect messages/answers after this point
+await chef.mark();
 
-// Yes/No → returns boolean  
+// Multiple choice - blocking by default
+await chef.choice("🛠️ Stack?", ["React", "Vue", "Svelte"]); // returns index|null
+
+// Multiple choice - non-blocking (answer via gather())
+// ⭐ marks recommended option, shown to user
+await chef.choice("🎨 Color?", ["Dark", "Light", "Auto"], { blocking: false, recommended: 0 });
+
+// Gather messages + resolve pending questions - NON-BLOCKING
+const { messages, questions } = await chef.gather();
+// messages: string[] - free text from user
+// questions: { question, options, answer, wasAnswered }[]
+
+// Blocking Yes/No → returns boolean|null (null on timeout)
 await chef.confirm("🚀 Ship it?");
 
-// Free text → returns string
+// Blocking free text → returns string|null (null on timeout)
 await chef.ask("📛 Project name?");
+
+// Collect multiple responses until stopword → returns {responses[], stopped, timedOut}
+await chef.collect("Any remarks?", "lfg", 60000); // 1min timeout
+
+// All blocking methods have 10min default timeout
 
 // Fire & forget notification
 await chef.notify("🎬 Lights, camera, coding!");
-
-// Send a screenshot/image to user
-await chef.sendPhoto("/path/to/screenshot.png", "👀 Check this out!");
-
-// Ask user for a screenshot → returns path to /tmp
-const photoPath = await chef.askPhoto("📸 Send me a screenshot?");
-// photoPath = "/tmp/chef-photo-uuid.jpg"
 ```
 
 ## Patterns
@@ -80,40 +88,27 @@ const name = await chef.ask("📛 Name this beast?");
 await chef.notify(`🧾 Order up: ${name} w/ ${["React","Vue","Svelte"][stack]}${auth ? " + auth 🔒" : ""}`);
 ```
 
-## 📸 Screenshot Workflows
-
-**Send screenshot TO user** (show them something):
+**Non-blocking questions with gather:**
 ```typescript
-await chef.sendPhoto("/tmp/screenshot.png", "🖼️ Here's the current UI");
-```
+await chef.mark();
+await chef.choice("🎨 Style?", ["Dark", "Light"], { blocking: false, recommended: 0 }); // ⭐ on Dark
+await chef.choice("📍 Where?", ["Top", "Bottom"], { blocking: false, recommended: 1 });
 
-**Request screenshot FROM user** (blocks until they send one or skip):
-```typescript
-const photoPath = await chef.askPhoto("🐛 Send me a screenshot of the bug?");
-// photoPath = "/tmp/chef-photo-abc123.jpg" or null if user types "skip"
-// Use look_at tool to analyze the image
-if (photoPath) {
-  // Analyze with look_at tool
-}
-```
+// ... do work while user may or may not respond ...
 
-**Visual debugging flow:**
-```typescript
-// 1. Ask user for screenshot of the problem
-const bugPhoto = await chef.askPhoto("🐛 What's broken? Screenshot please!");
-
-// 2. Analyze with look_at tool, implement fix, then...
-
-// 3. Send screenshot of the fix for confirmation
-await chef.sendPhoto("/tmp/fixed-ui.png", "✅ Fixed it! Look good?");
-const approved = await chef.confirm("🚀 Ship it?");
+const { messages, questions } = await chef.gather();
+// messages: free text user sent
+// questions: [{ question, options, answer, wasAnswered }]
+// wasAnswered=false → recommended/default was used
 ```
 
 ## Rules
 
-- `choice`, `confirm`, `ask`, `askPhoto` → blocks until human responds
-- `notify`, `sendPhoto` → fire & forget, no waiting
-- `askPhoto` downloads to `/tmp/chef-photo-{uuid}.{ext}` or returns `null` if user types "skip"
+- `choice()` → blocking by default, non-blocking with `{ blocking: false }`
+- `confirm`, `ask` → blocks until human responds
+- `notify` → fire & forget, no waiting
+- **NEVER use `ask()` for questions with options** → use `choice()` instead
+- **Any question with predefined options MUST use `choice()`**
 - Always use emojis in messages
 - Keep notifications under 280 chars (tweet-sized)
 - Be clever, not cringe

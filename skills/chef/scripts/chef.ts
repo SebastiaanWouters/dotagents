@@ -8,23 +8,11 @@
  *   const ok = await chef.confirm("Proceed?");
  *   const text = await chef.ask("Name?");
  *   await chef.notify("Done!");
- *   await chef.sendPhoto("/path/to/image.png", "Check this out!");
- *   const photoPath = await chef.askPhoto("Send me a screenshot?");
  *
  * Setup: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
  */
 
-import { randomUUID } from "crypto";
-
 const API = "https://api.telegram.org/bot";
-
-interface PhotoSize {
-  file_id: string;
-  file_unique_id: string;
-  width: number;
-  height: number;
-  file_size?: number;
-}
 
 interface Update {
   update_id: number;
@@ -32,8 +20,6 @@ interface Update {
     message_id: number;
     chat: { id: number };
     text?: string;
-    photo?: PhotoSize[];
-    caption?: string;
   };
   callback_query?: { id: string; data?: string; message?: { message_id: number; chat: { id: number } } };
 }
@@ -133,10 +119,30 @@ async function call<T>(api: string, method: string, body?: object): Promise<T> {
   return json.result as T;
 }
 
+interface PendingQuestion {
+  id: number;
+  question: string;
+  options: string[];
+  recommended: number;
+  messageId: number;
+  answered: boolean;
+  answer?: number;
+}
+
+interface ChoiceOptions {
+  blocking?: boolean;
+  recommended?: number;
+  cols?: number;
+  timeout?: number;
+}
+
 class ChefClient {
   private cfg = getConfig();
   private offset = 0;
   private initialized = false;
+  private checkpoint = 0;
+  private pendingQuestions: PendingQuestion[] = [];
+  private questionCounter = 0;
 
   private async init(): Promise<void> {
     if (this.initialized) return;
@@ -147,8 +153,84 @@ class ChefClient {
     });
     if (updates.length > 0) {
       this.offset = updates[0].update_id;
+      this.checkpoint = this.offset;
     }
     this.initialized = true;
+  }
+
+  /** Mark current position - gather() will collect messages after this point */
+  async mark(): Promise<void> {
+    await this.init();
+    this.checkpoint = this.offset;
+    this.pendingQuestions = [];
+  }
+
+  /** Gather all messages and resolve pending questions - non-blocking */
+  async gather(): Promise<{
+    messages: string[];
+    questions: Array<{ question: string; options: string[]; answer: string; wasAnswered: boolean }>;
+  }> {
+    await this.init();
+    const messages: string[] = [];
+    
+    // Get all pending updates without long polling
+    const updates = await call<Update[]>(this.cfg.api, "getUpdates", {
+      offset: this.checkpoint + 1,
+      timeout: 0,
+      allowed_updates: ["message", "callback_query"],
+    });
+    
+    for (const u of updates) {
+      // Check for callback answers to pending questions
+      if (u.callback_query?.message?.chat.id === this.cfg.chatId) {
+        const msgId = u.callback_query.message.message_id;
+        const pq = this.pendingQuestions.find(q => q.messageId === msgId && !q.answered);
+        if (pq && u.callback_query.data) {
+          const idx = parseInt(u.callback_query.data);
+          if (idx >= 0 && idx < pq.options.length) {
+            pq.answered = true;
+            pq.answer = idx;
+            await this.ackCallback(u.callback_query.id);
+            await this.editMessage(msgId, `${pq.question}\n\n✅ ${this.indexToLetter(idx)}) ${pq.options[idx]}`);
+          }
+        }
+      }
+      // Check for text answers (letter response)
+      if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
+        const txt = u.message.text.trim();
+        const letterIdx = this.letterToIndex(txt);
+        
+        // Try to match to unanswered question
+        const pq = this.pendingQuestions.find(q => !q.answered && letterIdx >= 0 && letterIdx < q.options.length);
+        if (pq && letterIdx >= 0) {
+          pq.answered = true;
+          pq.answer = letterIdx;
+          await this.editMessage(pq.messageId, `${pq.question}\n\n✅ ${this.indexToLetter(letterIdx)}) ${pq.options[letterIdx]}`);
+        } else {
+          // Regular message, not a question answer
+          messages.push(txt);
+        }
+      }
+      this.offset = u.update_id;
+    }
+    
+    // Resolve all pending questions (use recommended for unanswered)
+    const questions = this.pendingQuestions.map(pq => ({
+      question: pq.question,
+      options: pq.options,
+      answer: pq.options[pq.answered ? pq.answer! : pq.recommended],
+      wasAnswered: pq.answered,
+    }));
+    
+    // Update checkpoint so subsequent gather() won't re-process
+    this.checkpoint = this.offset;
+    
+    return { messages, questions };
+  }
+
+  /** @deprecated Use choice() with { blocking: false } instead */
+  async question(question: string, options: string[], recommended: number = 0): Promise<void> {
+    return this.choice(question, options, { blocking: false, recommended });
   }
 
   private async send(text: string, keyboard?: object): Promise<number> {
@@ -201,7 +283,10 @@ class ChefClient {
     return -1;
   }
 
-  async choice(question: string, options: string[], cols: number = 4): Promise<number> {
+  /** Multiple choice question - blocking by default, or non-blocking with { blocking: false } */
+  async choice(question: string, options: string[], opts: ChoiceOptions = {}): Promise<number | null | void> {
+    const { blocking = true, recommended = 0, cols = 4, timeout = 600000 } = opts;
+    
     if (!options || options.length === 0) {
       throw new ChefError("choice() requires at least one option", "INVALID_OPTIONS");
     }
@@ -211,10 +296,20 @@ class ChefClient {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
+    
+    const safeRecommended = recommended < 0 || recommended >= options.length ? 0 : recommended;
 
-    const optionsList = options.map((o, i) => `${this.indexToLetter(i)}) ${o}`).join("\n");
-    const hint = `\n\n💡 _Tap a button or type ${options.length > 1 ? `A-${this.indexToLetter(options.length - 1)}` : "A"}_`;
-    const fullQuestion = `${question}\n\n${optionsList}${hint}`;
+    await this.init();
+
+    const optionsList = blocking
+      ? options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}`).join("\n")
+      : options.map((o, i) => `  ${this.indexToLetter(i)}) ${o}${i === safeRecommended ? " ⭐" : ""}`).join("\n");
+    
+    const hint = blocking
+      ? `💡 _Tap a button or type ${options.length > 1 ? `A-${this.indexToLetter(options.length - 1)}` : "A"}_`
+      : `💡 _Tap or ignore (default: ${this.indexToLetter(safeRecommended)})_`;
+    
+    const fullQuestion = `${question}\n\n${optionsList}\n\n${hint}`;
 
     const buttons = options.map((_, i) => ({ text: this.indexToLetter(i), callback_data: `${i}` }));
     const rows: { text: string; callback_data: string }[][] = [];
@@ -224,14 +319,28 @@ class ChefClient {
 
     const msgId = await this.send(fullQuestion, { inline_keyboard: rows });
 
-    while (true) {
+    if (!blocking) {
+      this.pendingQuestions.push({
+        id: ++this.questionCounter,
+        question,
+        options,
+        recommended: safeRecommended,
+        messageId: msgId,
+        answered: false,
+      });
+      return;
+    }
+
+    const deadline = Date.now() + timeout;
+
+    while (Date.now() < deadline) {
       for (const u of await this.poll()) {
         if (u.callback_query?.message?.chat.id === this.cfg.chatId &&
             u.callback_query.message.message_id === msgId) {
           const idx = parseInt(u.callback_query.data ?? "");
           if (idx >= 0 && idx < options.length) {
             await this.ackCallback(u.callback_query.id);
-            await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
+            await this.editMessage(msgId, `${question}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
             return idx;
           }
         }
@@ -239,15 +348,16 @@ class ChefClient {
           const txt = u.message.text.trim();
           const idx = this.letterToIndex(txt);
           if (idx >= 0 && idx < options.length) {
-            await this.editMessage(msgId, `${fullQuestion}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
+            await this.editMessage(msgId, `${question}\n\n✅ ${this.indexToLetter(idx)}) ${options[idx]}`);
             return idx;
           }
         }
       }
     }
+    return null;
   }
 
-  async confirm(question: string): Promise<boolean> {
+  async confirm(question: string, timeoutMs: number = 600000): Promise<boolean | null> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
@@ -257,8 +367,9 @@ class ChefClient {
       { text: "❌ No", callback_data: "n" },
     ]]};
     const msgId = await this.send(question, kb);
+    const deadline = Date.now() + timeoutMs;
 
-    while (true) {
+    while (Date.now() < deadline) {
       for (const u of await this.poll()) {
         if (u.callback_query?.message?.chat.id === this.cfg.chatId &&
             u.callback_query.message.message_id === msgId) {
@@ -282,16 +393,18 @@ class ChefClient {
         }
       }
     }
+    return null;
   }
 
-  async ask(question: string): Promise<string> {
+  async ask(question: string, timeoutMs: number = 600000): Promise<string | null> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
 
     const msgId = await this.send(question);
+    const deadline = Date.now() + timeoutMs;
 
-    while (true) {
+    while (Date.now() < deadline) {
       for (const u of await this.poll()) {
         if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
           await this.editMessage(msgId, `${question}\n\n✅`);
@@ -299,6 +412,7 @@ class ChefClient {
         }
       }
     }
+    return null;
   }
 
   async notify(message: string): Promise<void> {
@@ -309,85 +423,30 @@ class ChefClient {
     await this.send(message);
   }
 
-  async sendPhoto(filePath: string, caption?: string): Promise<void> {
-    const file = Bun.file(filePath);
-    if (!(await file.exists())) {
-      throw new ChefError(`File not found: ${filePath}`, "FILE_NOT_FOUND");
-    }
-
-    const formData = new FormData();
-    formData.append("chat_id", String(this.cfg.chatId));
-    formData.append("photo", file);
-    if (caption) {
-      formData.append("caption", caption);
-      formData.append("parse_mode", "Markdown");
-    }
-
-    let res: Response;
-    try {
-      res = await fetch(`${this.cfg.api}/sendPhoto`, {
-        method: "POST",
-        body: formData,
-      });
-    } catch (err) {
-      throw new ChefError(`Network error: ${err instanceof Error ? err.message : "fetch failed"}`, "NETWORK_ERROR");
-    }
-
-    if (!res.ok) {
-      const body = await res.text();
-      throw new ChefError(`HTTP ${res.status}: ${body}`, "HTTP_ERROR");
-    }
-  }
-
-  private async downloadFile(fileId: string): Promise<string> {
-    const fileInfo = await call<{ file_path: string }>(this.cfg.api, "getFile", { file_id: fileId });
-    const downloadUrl = `https://api.telegram.org/file/bot${this.cfg.api.replace(API, "")}/${fileInfo.file_path}`;
-
-    let res: Response;
-    try {
-      res = await fetch(downloadUrl);
-    } catch (err) {
-      throw new ChefError(`Failed to download file: ${err instanceof Error ? err.message : "fetch failed"}`, "DOWNLOAD_ERROR");
-    }
-
-    if (!res.ok) {
-      throw new ChefError(`HTTP ${res.status} downloading file`, "HTTP_ERROR");
-    }
-
-    const ext = fileInfo.file_path.split(".").pop() || "jpg";
-    const localPath = `/tmp/chef-photo-${randomUUID()}.${ext}`;
-    const buffer = await res.arrayBuffer();
-    await Bun.write(localPath, buffer);
-
-    return localPath;
-  }
-
-  async askPhoto(question: string): Promise<string | null> {
+  async collect(question: string, stopword: string = "lfg", timeoutMs: number = 600000): Promise<{ responses: string[]; stopped: boolean; timedOut: boolean }> {
     if (!question || question.trim() === "") {
       throw new ChefError("question cannot be empty", "EMPTY_QUESTION");
     }
 
-    const msgId = await this.send(`${question}\n\n📸 _Send a photo (or type "skip" to cancel)_`);
+    const responses: string[] = [];
+    const stopLower = stopword.toLowerCase();
+    const deadline = Date.now() + timeoutMs;
+    
+    await this.send(`${question}\n\n💡 _Type "${stopword.toUpperCase()}" when done_`);
 
-    while (true) {
+    while (Date.now() < deadline) {
       for (const u of await this.poll()) {
-        if (u.message?.chat.id === this.cfg.chatId) {
-          if (u.message.photo && u.message.photo.length > 0) {
-            const largestPhoto = u.message.photo[u.message.photo.length - 1];
-            const localPath = await this.downloadFile(largestPhoto.file_id);
-            await this.editMessage(msgId, `${question}\n\n✅ Photo received`);
-            return localPath;
+        if (u.message?.chat.id === this.cfg.chatId && u.message.text) {
+          const txt = u.message.text.trim();
+          if (txt.toLowerCase() === stopLower) {
+            return { responses, stopped: true, timedOut: false };
           }
-          if (u.message.text) {
-            const txt = u.message.text.toLowerCase().trim();
-            if (["skip", "cancel", "no", "none", "n"].includes(txt)) {
-              await this.editMessage(msgId, `${question}\n\n⏭️ Skipped`);
-              return null;
-            }
-          }
+          responses.push(txt);
+          await this.send(`📝 Got it! Keep going or "${stopword.toUpperCase()}" to finish`);
         }
       }
     }
+    return { responses, stopped: false, timedOut: true };
   }
 }
 
@@ -397,10 +456,13 @@ export { ChefClient, ChefError };
 if (import.meta.main) {
   console.log("Chef - Blocking Telegram Q&A for user interviews\n");
   console.log("API:");
-  console.log("  chef.choice(q, opts, cols?)  → index (A-Z grid buttons)");
-  console.log("  chef.confirm(q)              → boolean (Yes/No)");
-  console.log("  chef.ask(q)                  → string (free text)");
-  console.log("  chef.notify(msg)             → void (no response)");
-  console.log("  chef.sendPhoto(path, cap?)   → void (send image)");
-  console.log("  chef.askPhoto(q)             → string (path to /tmp)");
+  console.log("  chef.mark()                              → void (checkpoint, clears pending questions)");
+  console.log("  chef.gather()                            → {messages[], questions[]} (non-blocking)");
+  console.log("  chef.choice(q, opts, {blocking,recommended,cols,timeout})");
+  console.log("                                           → index|null (blocking, default)");
+  console.log("                                           → void (non-blocking, resolved by gather)");
+  console.log("  chef.confirm(q, timeout?)                → boolean|null (blocking Yes/No, 10min default)");
+  console.log("  chef.ask(q, timeout?)                    → string|null (blocking free text, 10min default)");
+  console.log("  chef.collect(q, stopword?, timeout?)     → {responses[], stopped, timedOut} (10min default)");
+  console.log("  chef.notify(msg)                         → void (fire & forget)");
 }
