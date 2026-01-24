@@ -10,6 +10,25 @@ npx add-skills sebastiaanwouters/dotagents
 
 ---
 
+## Agent-Assisted Setup
+
+Tell your agent:
+
+```
+Set up sebastiaanwouters/dotagents
+```
+
+The agent will:
+1. **Interview you** — Which agent (Amp/Claude Code)? What workflows (simp.sh, mise-en-place)? Which skills needed?
+2. **Clone the repo** — Fetch skills from GitHub
+3. **Copy skills** — Install to `.amp/skills/` or `.claude/skills/` based on your agent
+4. **Configure MCP** — Merge any required MCP server configs
+5. **Check dependencies** — Verify required tools (bun, tk, etc.) are installed
+
+This works because agents can read this README and follow the structure.
+
+---
+
 ## Prerequisites
 
 ### Philosophy
