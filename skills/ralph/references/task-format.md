@@ -18,7 +18,7 @@ How to write task descriptions that future Ralph iterations can execute without 
 
 **Acceptance criteria:**
 - Specific verifiable criterion
-- npm run typecheck passes
+- Typecheck passes
 - [For UI] Verify in browser using agent-browser
 
 **Notes:**
@@ -42,7 +42,7 @@ Implement category name to ID mapping for expenses.
 **Acceptance criteria:**
 - Function returns category ID for valid names
 - Returns null for unknown categories
-- npm run typecheck passes
+- Typecheck passes
 
 **Notes:**
 - Follow pattern from upsert-income.ts
@@ -57,8 +57,8 @@ Implement category name to ID mapping for expenses.
 
 - "Add `investorType` column to investor table with default 'cold'"
 - "Filter dropdown has options: All, Cold, Friend"
-- "npm run typecheck passes"
-- "npm test -- path/to/test.ts passes"
+- "Typecheck passes"
+- "Tests pass"
 
 ### Bad Criteria (Vague)
 
@@ -69,13 +69,13 @@ Implement category name to ID mapping for expenses.
 ### Always Include
 
 ```
-npm run typecheck passes
+Typecheck passes
 ```
 
 ### For Tasks with Testable Logic
 
 ```
-npm test passes
+Tests pass
 ```
 
 ### For UI/Browser Tasks

@@ -21,8 +21,10 @@ Don't use React Router loaders/actions with Convex.
 ## Installation
 
 ```bash
-npm install react-router-dom
+react-router-dom
 ```
+
+_(Install with your project's package manager)_
 
 ## Basic Setup
 

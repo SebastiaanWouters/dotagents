@@ -41,9 +41,9 @@ To run a command (e.g., a dev server) in a way that persists and can be inspecte
 
 2.  **Send the command** to that window.
     ```bash
-    tmux send-keys -t "server-log" "npm start" C-m
+    tmux send-keys -t "server-log" "./start-dev-server.sh" C-m
     ```
-    _(`C-m` simulates the Enter key)_
+    _(Replace with your project's start command. `C-m` simulates Enter.)_
 
 ## 3. Inspect Output (Read Logs)
 
@@ -86,7 +86,7 @@ You can chain multiple tmux commands in a single invocation using `';'` (note th
 Example: Create window and start process in one go:
 
 ```bash
-tmux new-window -n "server-log" -d ';' send-keys -t "server-log" "npm start" C-m
+tmux new-window -n "server-log" -d ';' send-keys -t "server-log" "./start-dev-server.sh" C-m
 ```
 
 ## Summary of Pattern
