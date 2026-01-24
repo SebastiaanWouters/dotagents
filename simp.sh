@@ -60,6 +60,13 @@ AFTER IMPLEMENTATION (before QA):
 - Use question answers (wasAnswered=false means default/recommended was used)
 - chef.mark() — new checkpoint for QA phase
 
+E2E TESTING (if ticket involves UI/frontend changes):
+- Load "e2e-tester" skill
+- Use agent-browser to explore and verify the implemented feature works
+- If app has Playwright tests: generate/update CI-ready test for the feature
+- If Laravel app with Pest: consider adding Pest browser test (see reference/pest-browser.md)
+- Skip this phase if ticket is backend-only or has no user-facing changes
+
 QA PHASE:
 - Can use chef.choice() with { blocking: false } for non-blocking questions during QA too
 - Run project QA checks (lint, typecheck, tests) — all must pass

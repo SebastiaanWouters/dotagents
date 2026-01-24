@@ -6,6 +6,12 @@ allowed-tools: Bash(agent-browser:*)
 
 # Browser Automation with agent-browser
 
+## Installation
+
+```bash
+bun i -g agent-browser@latest
+```
+
 ## Quick start
 
 ```bash

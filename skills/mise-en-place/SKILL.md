@@ -102,7 +102,18 @@ For each major feature:
 - What edge cases exist?
 - How does it interact with other features?
 
-#### 7. Constraints & Requirements
+#### 7. Deployment & Infrastructure
+- Where will this be hosted? (Fly.io, Vercel, AWS, self-hosted, etc.)
+- Domain name / URL structure?
+- Environment setup (staging, production)?
+- CI/CD requirements? (GitHub Actions, etc.)
+- SSL/TLS needs?
+- CDN for assets?
+- Monitoring/logging requirements?
+- Backup strategy?
+- Scaling expectations? (concurrent users, traffic patterns)
+
+#### 8. Constraints & Requirements
 - Timeline or deadline?
 - Performance requirements?
 - Accessibility needs?
@@ -136,6 +147,7 @@ Generate `docs/SPEC.md` covering:
 - Design & Theme (visual direction, references, personality)
 - Data Model (key entities and relationships)
 - Integrations (third-party services and APIs)
+- Deployment & Infrastructure (hosting, CI/CD, environments, scaling)
 - Constraints & Requirements
 - Open Questions
 
