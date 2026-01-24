@@ -1,13 +1,13 @@
 ---
 name: mise-en-place
-description: "Transforms raw ideas into complete specs via adaptive interview. Triggers on: mise-en-place, prep my idea, spec this out. Uses chef (Telegram) or built-in conversation, compound for knowledge priming."
+description: "Transforms raw ideas into complete specs via adaptive interview. Triggers on: mise-en-place, prep my idea, spec this out. Starts from SPEC.md or user-specified file. Uses chef (Telegram) or built-in conversation, compound for knowledge priming."
 ---
 
 # Mise-en-Place 🍳
 
 **Everything in its place before cooking begins.**
 
-Transform a vague idea into a complete, implementation-ready specification through an adaptive conversation.
+Transform an idea into a complete, implementation-ready specification through adaptive conversation, starting from existing documentation.
 
 ## Goal
 
@@ -15,7 +15,7 @@ Build a complete mental model of what we're building:
 - **What** we're building and why
 - **Who** it's for and their journey
 - **How** it works technically (exact stack, libraries, integrations)
-- **How** it looks and feels (design, theme, personality)
+- **How** it looks and feels (design system, theme, personality)
 - **What** each part/page/step does in detail
 
 ## Communication Mode
@@ -29,13 +29,48 @@ Build a complete mental model of what we're building:
 
 If chef is not explicitly requested, use built-in conversation mode.
 
-## Three Phases
+## Five Phases
 
 | Phase | Purpose | Output |
 |-------|---------|--------|
-| **Discovery** | Adaptive interview to extract full picture | `docs/SPEC.md` |
-| **Research** | Prime knowledge base with stack docs | Compound store |
-| **Initialize** | Set up agent guidelines for implementation | `AGENTS.md` |
+| **0. Bootstrap** | Read existing spec file as starting point | Context for discovery |
+| **1. Discovery** | Adaptive interview to fill gaps | `docs/SPEC.md` |
+| **2. Design System** | Create visual/component foundation | `docs/DESIGN_SYSTEM.md` |
+| **3. Research** | Prime knowledge base with stack docs | Compound store |
+| **4. Initialize** | Set up agent guidelines for implementation | `AGENTS.md` |
+
+---
+
+## Phase 0: Bootstrap
+
+**Start here — never from scratch.**
+
+### Source File
+
+1. Check for existing spec file in this order:
+   - User-specified file (if provided, e.g., "use README.md" or "start from docs/idea.md")
+   - `SPEC.md` in project root
+   - `docs/SPEC.md`
+   - `README.md` as fallback
+
+2. Read the file and extract:
+   - Project description/vision
+   - Any mentioned features or requirements
+   - Tech stack hints
+   - Design preferences
+   - Referenced resources (URLs, repos, apps)
+
+3. Summarize what you learned and what's still missing before proceeding to Discovery.
+
+### Gather Resources (Optional)
+
+Ask user for reference materials:
+- **URLs** — Documentation, design inspiration, competitor sites
+- **Example apps** — "Like Notion but for X", "Similar to Linear's UI"
+- **GitHub repos** — Reference implementations, starter templates, design systems
+- **Figma/design files** — If available
+
+Store these references for use in Discovery and Design System phases.
 
 ---
 
@@ -45,7 +80,7 @@ Ask intelligent, open-ended questions. Each question builds on previous answers.
 
 ### Starting Point
 
-Ask the user to paint the full picture — the problem, the solution, who it's for.
+Review what Bootstrap phase extracted, then identify gaps. Focus questions on what's unclear or missing — don't re-ask what's already documented.
 
 ### Adaptive Questioning
 
@@ -153,27 +188,127 @@ Generate `docs/SPEC.md` covering:
 
 ---
 
-## Phase 2: Research & Prime Compound
+## Phase 2: Design System
 
-After spec is written, research all chosen technologies and store in compound.
+Create a design foundation based on the spec, gathered resources, and project description.
+
+### Inputs
+
+Use these sources to inform the design system:
+- **SPEC.md** — Design & Theme section, brand personality
+- **Reference resources** — URLs, example apps, GitHub repos from Bootstrap phase
+- **Tech stack** — Component library choice affects design tokens
+
+### Research References
+
+For each provided resource:
+- **URLs** — Fetch and analyze visual patterns, color usage, typography, spacing
+- **Example apps** — Document what makes their design work (if accessible)
+- **GitHub repos** — Check for existing design tokens, theme configs, component patterns
+- **Design systems** — If referencing known systems (Tailwind, Radix, shadcn), pull their conventions
+
+### Generate `docs/DESIGN_SYSTEM.md`
+
+Create a comprehensive design system document:
+
+#### 1. Design Tokens
+```
+Colors:
+  - Primary: [hex] — usage
+  - Secondary: [hex] — usage
+  - Accent: [hex] — usage
+  - Background: [hex]
+  - Surface: [hex]
+  - Text: [hex primary, hex secondary, hex muted]
+  - Border: [hex]
+  - Error/Success/Warning: [hex each]
+
+Typography:
+  - Font families (headings, body, mono)
+  - Scale (xs, sm, base, lg, xl, 2xl, etc.)
+  - Line heights
+  - Font weights
+
+Spacing:
+  - Base unit (e.g., 4px or 0.25rem)
+  - Scale (1, 2, 3, 4, 6, 8, 12, 16, etc.)
+
+Border Radius:
+  - none, sm, md, lg, full
+
+Shadows:
+  - sm, md, lg, xl
+
+Breakpoints:
+  - sm, md, lg, xl, 2xl
+```
+
+#### 2. Component Patterns
+Define patterns for core UI elements:
+- Buttons (variants: primary, secondary, ghost, destructive; sizes: sm, md, lg)
+- Inputs (text, select, checkbox, radio, toggle)
+- Cards (with header, body, footer patterns)
+- Modals/Dialogs
+- Navigation (header, sidebar, tabs, breadcrumbs)
+- Lists & Tables
+- Loading states (skeleton, spinner)
+- Empty states
+- Error states
+- Notifications/Toasts
+
+#### 3. Layout Patterns
+- Page layouts (sidebar, stacked, centered)
+- Grid systems
+- Container widths
+- Responsive behavior
+
+#### 4. Iconography
+- Icon library choice (Lucide, Heroicons, etc.)
+- Size conventions
+- Usage patterns
+
+#### 5. Motion & Animation
+- Transition durations (fast, normal, slow)
+- Easing curves
+- Animation patterns (fade, slide, scale)
+
+#### 6. Dark Mode (if applicable)
+- Token overrides for dark theme
+- Component adjustments
+
+### Integration with Tech Stack
+
+Based on the chosen styling approach:
+- **Tailwind** — Generate `tailwind.config.js` theme extension
+- **CSS Variables** — Generate `:root` variable definitions
+- **styled-components/emotion** — Generate theme object
+- **Component library (shadcn, Radix)** — Document customization approach
+
+---
+
+## Phase 3: Research & Prime Compound
+
+After spec and design system are written, research all chosen technologies and store in compound.
 
 1. **Extract stack** from SPEC.md
 2. **Research each technology** via web_search and read_web_page:
    - Installation, configuration, patterns
    - Integration with other stack items
    - Common gotchas
-3. **Store in compound** — for each tech: setup commands, config files, API patterns, code examples, pitfalls
-4. **Notify completion** — via chef if using Telegram mode, otherwise inform user in chat
+3. **Include design system** — Store design tokens and patterns for implementing agents
+4. **Store in compound** — for each tech: setup commands, config files, API patterns, code examples, pitfalls
+5. **Notify completion** — via chef if using Telegram mode, otherwise inform user in chat
 
 ---
 
-## Phase 3: Initialize AGENTS.md
+## Phase 4: Initialize AGENTS.md
 
-Use the `agents-md` skill to create project-specific agent guidelines based on the spec.
+Use the `agents-md` skill to create project-specific agent guidelines based on the spec and design system.
 
 This ensures implementing agents know:
 - Project structure and conventions
 - Tech stack specifics and patterns
+- **Design system tokens and patterns**
 - Commands for build, test, lint, etc.
 - Code style preferences
 - Any project-specific rules from the spec
