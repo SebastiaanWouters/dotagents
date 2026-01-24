@@ -1,6 +1,6 @@
 ---
 name: mise-en-place
-description: "Transforms raw ideas into complete specs via adaptive Telegram interview. Triggers on: mise-en-place, prep my idea, spec this out. Uses chef for BLOCKING questions, compound for knowledge priming."
+description: "Transforms raw ideas into complete specs via adaptive interview. Triggers on: mise-en-place, prep my idea, spec this out. Uses chef (Telegram) or built-in conversation, compound for knowledge priming."
 ---
 
 # Mise-en-Place 🍳
@@ -18,6 +18,17 @@ Build a complete mental model of what we're building:
 - **How** it looks and feels (design, theme, personality)
 - **What** each part/page/step does in detail
 
+## Communication Mode
+
+**Two modes available:**
+
+| Mode | When to use | How |
+|------|-------------|-----|
+| **Chef (Telegram)** | User says "use chef" or "via telegram" | Load chef skill, use `chef ask` for BLOCKING questions |
+| **Built-in (default)** | Normal conversation | Ask questions directly in chat, wait for user response |
+
+If chef is not explicitly requested, use built-in conversation mode.
+
 ## Three Phases
 
 | Phase | Purpose | Output |
@@ -30,7 +41,7 @@ Build a complete mental model of what we're building:
 
 ## Phase 1: Discovery
 
-Use chef for all questions (BLOCKING). Ask intelligent, open-ended questions. Each question builds on previous answers.
+Ask intelligent, open-ended questions. Each question builds on previous answers. Wait for user response before proceeding.
 
 ### Starting Point
 
@@ -140,7 +151,7 @@ After spec is written, research all chosen technologies and store in compound.
    - Integration with other stack items
    - Common gotchas
 3. **Store in compound** — for each tech: setup commands, config files, API patterns, code examples, pitfalls
-4. **Notify completion** via chef
+4. **Notify completion** — via chef if using Telegram mode, otherwise inform user in chat
 
 ---
 
@@ -163,4 +174,5 @@ This ensures implementing agents know:
 - **Each question builds on previous** — show you're listening
 - **Go deep on unclear areas** — don't accept vague answers for critical details
 - **Be specific about tech** — get exact library names, not categories
-- **ALL questions are BLOCKING** — wait for each response
+- **One question at a time** — wait for user response before asking next
+- **Batch when appropriate** — in built-in mode, can group 2-3 related questions if context warrants it

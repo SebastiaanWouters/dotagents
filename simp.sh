@@ -15,16 +15,13 @@ if [[ ! -d ".tickets" ]] || [[ -z "$(ls -A .tickets 2>/dev/null)" ]]; then
 FIRST:
 1. Read AGENTS.md file
 2. Load "compound" skill → run "compound store" to initialize docs/ structure if empty
-3. Load "chef" skill
+3. Load "chef" skill — ALL user communication goes through chef (Telegram)
 4. Load "mise-en-place" skill
 
 THEN:
 - Notify user via chef: "🍳 No tickets found! Let'\''s cook up a plan..."
-- Run the full mise-en-place process:
-  1. Discovery phase: interview user about their idea via chef
-  2. Generate SPEC.md from answers
-  3. Decomposition phase: create granular tickets with dependencies
-- After tickets are created, notify user and exit
+- Run mise-en-place using chef for all interview questions
+- After tickets are created, notify user via chef and exit
 
 This setup only runs once. After tickets exist, the main loop takes over.'
 
