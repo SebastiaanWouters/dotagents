@@ -4,9 +4,7 @@ PWA plugins for popular build tools that generate service workers and manifests.
 
 ## Vite (vite-plugin-pwa)
 
-```bash
-npm install -D vite-plugin-pwa
-```
+Dev dependency: `vite-plugin-pwa`
 
 ```typescript
 // vite.config.ts
@@ -60,47 +58,9 @@ function App() {
 
 ---
 
-## Webpack (workbox-webpack-plugin)
-
-```bash
-npm install -D workbox-webpack-plugin
-```
-
-```javascript
-// webpack.config.js
-const { GenerateSW } = require('workbox-webpack-plugin');
-
-module.exports = {
-  plugins: [
-    new GenerateSW({
-      clientsClaim: true,
-      skipWaiting: true,
-      runtimeCaching: [
-        {
-          urlPattern: /^https:\/\/api\./,
-          handler: 'NetworkFirst'
-        },
-        {
-          urlPattern: /\.(?:png|jpg|jpeg|svg)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'images',
-            expiration: { maxEntries: 50 }
-          }
-        }
-      ]
-    })
-  ]
-};
-```
-
----
-
 ## Next.js (next-pwa)
 
-```bash
-npm install next-pwa
-```
+Dependency: `next-pwa`
 
 ```javascript
 // next.config.js
@@ -120,9 +80,7 @@ Create `public/manifest.json` manually.
 
 ## Nuxt 3 (@vite-pwa/nuxt)
 
-```bash
-npm install -D @vite-pwa/nuxt
-```
+Dev dependency: `@vite-pwa/nuxt`
 
 ```typescript
 // nuxt.config.ts
@@ -142,9 +100,7 @@ export default defineNuxtConfig({
 
 ## SvelteKit (@vite-pwa/sveltekit)
 
-```bash
-npm install -D @vite-pwa/sveltekit
-```
+Dev dependency: `@vite-pwa/sveltekit`
 
 ```typescript
 // vite.config.ts
@@ -159,11 +115,7 @@ export default defineConfig({
 
 ## Icon Generation
 
-### @vite-pwa/assets-generator
-
-```bash
-npm install -D @vite-pwa/assets-generator
-```
+Dev dependency: `@vite-pwa/assets-generator`
 
 ```typescript
 // pwa-assets.config.ts
@@ -175,9 +127,7 @@ export default defineConfig({
 });
 ```
 
-```bash
-npx pwa-assets-generator
-```
+Run: `npx pwa-assets-generator`
 
 ### Required Sizes
 
