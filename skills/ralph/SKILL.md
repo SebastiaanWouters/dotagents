@@ -84,8 +84,8 @@ See [execution-loop.md](references/execution-loop.md) for full details.
 ## Quality Requirements
 
 Before marking any task complete:
-- `npm run typecheck` must pass
-- `npm test` must pass
+- Typecheck must pass (project's typecheck command)
+- Tests must pass (project's test command)
 - Changes must be committed
 - Progress must be logged
 

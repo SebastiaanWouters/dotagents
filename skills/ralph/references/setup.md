@@ -220,7 +220,7 @@ head -10 scripts/ralph/progress.txt
 - [ ] Chatted through feature to understand scope
 - [ ] Each task completable in one iteration (small enough)
 - [ ] Tasks ordered by dependency (schema → backend → UI → tests)
-- [ ] Every task has "npm run typecheck passes" in description
+- [ ] Every task has "typecheck passes" in description
 - [ ] UI tasks have browser verification in description
 - [ ] Descriptions have enough detail for Ralph to implement without context
 - [ ] Parent task ID saved to scripts/ralph/parent-task-id.txt

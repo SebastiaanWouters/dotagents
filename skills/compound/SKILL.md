@@ -406,7 +406,7 @@ docs/gotchas/authentication-problems.md  # DUPLICATE!
 ❌ **Storing obvious information**
 ```markdown
 # How to Start the Server
-Run `npm start`  # This belongs in README!
+Run the dev server command  # This belongs in README/AGENTS.md!
 ```
 
 ❌ **Huge monolithic files**

@@ -86,7 +86,7 @@ FIRST: Read scripts/ralph/progress.txt - check the "Codebase Patterns" section f
 
 When complete:
 
-1. Run quality checks: `npm run typecheck` and `npm test`
+1. Run quality checks: typecheck and tests (use project's commands from AGENTS.md)
    - If either fails, FIX THE ISSUES and re-run until both pass
    - Do NOT proceed until quality checks pass
 

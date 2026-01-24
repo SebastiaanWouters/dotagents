@@ -12,11 +12,17 @@ npx add-skills sebastiaanwouters/dotagents
 
 ## Prerequisites
 
+### Philosophy
+
+Skills are **package-manager agnostic**. Your project decides which package manager to use (npm, bun, pnpm, yarn). Skills that reference "typecheck" or "tests" mean whatever commands your project uses—document these in your `AGENTS.md`.
+
+Only skills with their **own scripts** (chef, picasso) require a specific runtime (bun).
+
 ### Required Tools
 
 | Tool | Install | Used By |
 |------|---------|---------|
-| `bun` | [bun.sh](https://bun.sh) | chef, picasso, agent-browser |
+| `bun` | [bun.sh](https://bun.sh) | chef scripts, picasso scripts, agent-browser |
 | `tk` | `go install github.com/wedow/ticket/cmd/tk@latest` | ticket, simp.sh |
 | `amp` | [ampcode.com](https://ampcode.com) | simp.sh, ralph |
 
