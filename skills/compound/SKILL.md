@@ -397,13 +397,6 @@ padding: var(--space-4);  /* existing token */
 
 ## Anti-Patterns
 
-❌ **Creating docs/README.md**
-```bash
-# Wrong - duplicates knowledge in this skill
-touch docs/README.md
-# Just create the folders you need, no README
-```
-
 ❌ **Creating near-duplicate files**
 ```
 docs/gotchas/auth-issues.md
