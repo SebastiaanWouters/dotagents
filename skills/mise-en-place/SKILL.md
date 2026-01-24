@@ -45,6 +45,41 @@ If chef is not explicitly requested, use built-in conversation mode.
 
 **Start here — never from scratch.**
 
+### Codebase Analysis (if exists)
+
+Before reading spec files, check if this is an existing project with code:
+
+1. **Detect existing codebase** — Look for:
+   - `package.json`, `composer.json`, `Cargo.toml`, `go.mod`, `requirements.txt`, etc.
+   - `src/`, `app/`, `lib/` directories
+   - Framework-specific files (e.g., `next.config.js`, `vite.config.ts`, `artisan`)
+
+2. **If codebase exists, analyze it first:**
+   - **Tech stack detection** — Parse lock files, configs, imports to identify exact frameworks/libraries/versions
+   - **Project structure** — Map out directories, key files, architectural patterns
+   - **Existing features** — Scan routes, components, models to understand what's already built
+   - **Design patterns in use** — Check styling approach (CSS modules, Tailwind, styled-components), component patterns
+   - **Database/API layer** — Identify ORM, migrations, API structure
+   - **Authentication** — Check for existing auth implementation
+   - **Deployment setup** — Look for Docker, CI/CD configs, deploy scripts
+
+3. **Create analysis summary:**
+   ```
+   ## Codebase Analysis
+   
+   **Stack detected:** [exact versions from package.json/lock files]
+   **Structure:** [brief architecture overview]
+   **Features built:** [list of existing functionality]
+   **Patterns in use:** [styling, state management, API patterns]
+   **Missing/incomplete:** [obvious gaps or TODO markers found]
+   ```
+
+4. **Use analysis to guide Discovery** — Skip questions about already-implemented choices. Focus on:
+   - Gaps in existing implementation
+   - New features to add
+   - Improvements to current patterns
+   - Design refinements
+
 ### Source File
 
 1. Check for existing spec file in this order:
@@ -56,11 +91,11 @@ If chef is not explicitly requested, use built-in conversation mode.
 2. Read the file and extract:
    - Project description/vision
    - Any mentioned features or requirements
-   - Tech stack hints
+   - Tech stack hints (cross-reference with codebase analysis)
    - Design preferences
    - Referenced resources (URLs, repos, apps)
 
-3. Summarize what you learned and what's still missing before proceeding to Discovery.
+3. Summarize what you learned from **both** codebase analysis and spec files before proceeding to Discovery.
 
 ### Gather Resources (Optional)
 
@@ -80,7 +115,15 @@ Ask intelligent, open-ended questions. Each question builds on previous answers.
 
 ### Starting Point
 
-Review what Bootstrap phase extracted, then identify gaps. Focus questions on what's unclear or missing — don't re-ask what's already documented.
+Review what Bootstrap phase extracted (codebase analysis + spec files), then identify gaps. 
+
+**If existing codebase was analyzed:**
+- DO NOT ask about tech stack choices already implemented
+- DO NOT ask about patterns/conventions already established
+- REFERENCE existing implementation when asking about extensions ("I see you're using Convex for the backend. For the new feature, should we...")
+- FOCUS on: what's missing, what needs improvement, new features to add
+
+Focus questions on what's unclear or missing — don't re-ask what's already documented or implemented.
 
 ### Adaptive Questioning
 
@@ -108,7 +151,9 @@ Dynamically choose your next question based on what's missing or unclear. Fill t
 - What are the key states (loading, empty, error, success)?
 
 #### 4. Tech Stack (Be Specific)
-Ask about each layer, get exact library/framework names:
+**Skip if codebase analysis already detected the stack.** Only ask about missing layers or new additions.
+
+For greenfield projects, ask about each layer, get exact library/framework names:
 - Frontend framework & version
 - Routing solution
 - State management approach
@@ -120,6 +165,11 @@ Ask about each layer, get exact library/framework names:
 - File storage (if any)
 - Third-party integrations/APIs
 - Deployment target
+
+For existing codebases, focus on:
+- New integrations needed for planned features
+- Gaps in current stack (e.g., "I see no testing setup, should we add one?")
+- Upgrades or migrations being considered
 
 #### 5. Design & Theme
 - What's the visual style? (Show examples/references if possible)
