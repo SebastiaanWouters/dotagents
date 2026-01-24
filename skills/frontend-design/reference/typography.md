@@ -115,7 +115,30 @@ Check what features your font supports at [Wakamai Fondue](https://wakamaifondue
 
 ## Typography System Architecture
 
-Name tokens semantically (`--text-body`, `--text-heading`), not by value (`--font-size-16`). Include font stacks, size scale, weights, line-heights, and letter-spacing in your token system.
+Define typography tokens in your theme using Tailwind v4's namespaces:
+
+```css
+@theme {
+  /* Font families */
+  --font-display: "Satoshi", sans-serif;
+  --font-body: "Inter", sans-serif;
+  
+  /* Font sizes (creates text-* utilities) */
+  --text-hero: 4rem;
+  --text-hero--line-height: 1.1;
+  
+  /* Font weights */
+  --font-weight-heading: 700;
+  
+  /* Letter spacing */
+  --tracking-tight: -0.02em;
+  
+  /* Line heights */
+  --leading-relaxed: 1.75;
+}
+```
+
+Use as `font-display`, `text-hero`, `font-heading`, `tracking-tight`, `leading-relaxed`.
 
 ## Accessibility Considerations
 

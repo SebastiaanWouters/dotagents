@@ -26,15 +26,15 @@ Timing matters more than easing. These durations feel right for most UI:
 **For micro-interactions, use exponential curves**—they feel natural because they mimic real physics (friction, deceleration):
 
 ```css
-/* Quart out - smooth, refined (recommended default) */
---ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-
-/* Quint out - slightly more dramatic */
---ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-
-/* Expo out - snappy, confident */
---ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+/* Define custom easings in your theme */
+@theme {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);  /* smooth, refined (recommended default) */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); /* slightly more dramatic */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);   /* snappy, confident */
+}
 ```
+
+Use with `ease-out-quart`, `ease-out-quint`, `ease-out-expo` utilities.
 
 **Avoid bounce and elastic curves.** They were trendy in 2015 but now feel tacky and amateurish. Real objects don't bounce when they stop—they decelerate smoothly. Overshoot effects draw attention to the animation itself rather than the content.
 

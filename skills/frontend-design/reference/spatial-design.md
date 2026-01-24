@@ -8,13 +8,21 @@
 
 ### Name Tokens Semantically
 
-Name by relationship (`--space-sm`, `--space-lg`), not value (`--spacing-8`). Use `gap` instead of margins for sibling spacing—it eliminates margin collapse and cleanup hacks.
+In Tailwind v4, spacing utilities derive dynamically from a single `--spacing` variable. Customize via `@theme`:
+
+```css
+@theme {
+  --spacing: 0.25rem; /* Base unit (4px) */
+}
+```
+
+Use `gap` instead of margins for sibling spacing—it eliminates margin collapse and cleanup hacks.
 
 ## Grid Systems
 
 ### The Self-Adjusting Grid
 
-Use `repeat(auto-fit, minmax(280px, 1fr))` for responsive grids without breakpoints. Columns are at least 280px, as many as fit per row, leftovers stretch. For complex layouts, use named grid areas (`grid-template-areas`) and redefine them at breakpoints.
+Use `grid-cols-[repeat(auto-fit,minmax(280px,1fr))]` for responsive grids without breakpoints. Columns are at least 280px, as many as fit per row, leftovers stretch. For complex layouts, use named grid areas (`grid-template-areas`) and redefine them at breakpoints.
 
 ## Visual Hierarchy
 
@@ -47,23 +55,24 @@ Cards are overused. Spacing and alignment create visual grouping naturally. Use 
 
 ## Container Queries
 
-Viewport queries are for page layouts. **Container queries are for components**:
+Viewport queries are for page layouts. **Container queries are for components**. Tailwind v4 has first-class container query support:
+
+```html
+<!-- Mark the container -->
+<div class="@container">
+  <!-- Use @sm, @md, @lg variants for container-based breakpoints -->
+  <div class="grid gap-4 @md:grid-cols-[120px_1fr]">
+    <!-- ... -->
+  </div>
+</div>
+```
+
+Define custom container breakpoints in your theme:
 
 ```css
-.card-container {
-  container-type: inline-size;
-}
-
-.card {
-  display: grid;
-  gap: var(--space-md);
-}
-
-/* Card layout changes based on its container, not viewport */
-@container (min-width: 400px) {
-  .card {
-    grid-template-columns: 120px 1fr;
-  }
+@theme {
+  --container-3xs: 16rem;
+  --container-2xs: 18rem;
 }
 ```
 
@@ -93,7 +102,17 @@ Buttons can look small but need large touch targets (44px minimum). Use padding 
 
 ## Depth & Elevation
 
-Create semantic z-index scales (dropdown → sticky → modal-backdrop → modal → toast → tooltip) instead of arbitrary numbers. For shadows, create a consistent elevation scale (sm → md → lg → xl). **Key insight**: Shadows should be subtle—if you can clearly see it, it's probably too strong.
+Create semantic z-index scales (dropdown → sticky → modal-backdrop → modal → toast → tooltip) instead of arbitrary numbers. Define custom shadows in your theme:
+
+```css
+@theme {
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-elevation-1: 0 1px 3px rgb(0 0 0 / 0.1);
+  --shadow-elevation-2: 0 4px 6px rgb(0 0 0 / 0.1);
+}
+```
+
+**Key insight**: Shadows should be subtle—if you can clearly see it, it's probably too strong.
 
 ---
 

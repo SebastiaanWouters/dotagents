@@ -2,14 +2,19 @@
 
 ## Color Spaces: Use OKLCH
 
-**Stop using HSL.** Use OKLCH (or LCH) instead. It's perceptually uniform, meaning equal steps in lightness *look* equal—unlike HSL where 50% lightness in yellow looks bright while 50% in blue looks dark.
+**Stop using HSL.** Use OKLCH (or LCH) instead. It's perceptually uniform, meaning equal steps in lightness *look* equal—unlike HSL where 50% lightness in yellow looks bright while 50% in blue looks dark. Tailwind v4's default palette uses OKLCH.
 
 ```css
-/* OKLCH: lightness (0-100%), chroma (0-0.4+), hue (0-360) */
---color-primary: oklch(60% 0.15 250);      /* Blue */
---color-primary-light: oklch(85% 0.08 250); /* Same hue, lighter */
---color-primary-dark: oklch(35% 0.12 250);  /* Same hue, darker */
+/* Define custom colors in @theme */
+@theme {
+  /* OKLCH: lightness (0-1), chroma (0-0.4+), hue (0-360) */
+  --color-primary: oklch(0.6 0.15 250);      /* Blue */
+  --color-primary-light: oklch(0.85 0.08 250); /* Same hue, lighter */
+  --color-primary-dark: oklch(0.35 0.12 250);  /* Same hue, darker */
+}
 ```
+
+Use as `bg-primary`, `text-primary-light`, etc.
 
 **Key insight**: As you move toward white or black, reduce chroma (saturation). High chroma at extreme lightness looks garish. A light blue at 85% lightness needs ~0.08 chroma, not the 0.15 of your base color.
 
@@ -20,17 +25,19 @@
 **Pure gray is dead.** Add a subtle hint of your brand hue to all neutrals:
 
 ```css
-/* Dead grays */
---gray-100: oklch(95% 0 0);     /* No personality */
---gray-900: oklch(15% 0 0);
+@theme {
+  /* Dead grays */
+  --color-gray-100: oklch(0.95 0 0);     /* No personality */
+  --color-gray-900: oklch(0.15 0 0);
 
-/* Warm-tinted grays (add brand warmth) */
---gray-100: oklch(95% 0.01 60);  /* Hint of warmth */
---gray-900: oklch(15% 0.01 60);
+  /* Warm-tinted grays (add brand warmth) */
+  --color-gray-100: oklch(0.95 0.01 60);  /* Hint of warmth */
+  --color-gray-900: oklch(0.15 0.01 60);
 
-/* Cool-tinted grays (tech, professional) */
---gray-100: oklch(95% 0.01 250); /* Hint of blue */
---gray-900: oklch(15% 0.01 250);
+  /* Cool-tinted grays (tech, professional) */
+  --color-gray-100: oklch(0.95 0.01 250); /* Hint of blue */
+  --color-gray-900: oklch(0.15 0.01 250);
+}
 ```
 
 The chroma is tiny (0.01) but perceptible. It creates subconscious cohesion between your brand color and your UI.
@@ -84,7 +91,7 @@ These commonly fail contrast or cause readability issues:
 
 ### Never Use Pure Gray or Pure Black
 
-Pure gray (`oklch(50% 0 0)`) and pure black (`#000`) don't exist in nature—real shadows and surfaces always have a color cast. Even a chroma of 0.005-0.01 is enough to feel natural without being obviously tinted. (See tinted neutrals example above.)
+Pure gray (`oklch(0.5 0 0)`) and pure black (`#000`) don't exist in nature—real shadows and surfaces always have a color cast. Even a chroma of 0.005-0.01 is enough to feel natural without being obviously tinted. (See tinted neutrals example above.)
 
 ### Testing
 
@@ -108,20 +115,32 @@ You can't just swap colors. Dark mode requires different design decisions:
 | White backgrounds | Never pure black—use dark gray (oklch 12-18%) |
 
 ```css
-/* Dark mode depth via surface color, not shadow */
-:root[data-theme="dark"] {
-  --surface-1: oklch(15% 0.01 250);
-  --surface-2: oklch(20% 0.01 250);  /* "Higher" = lighter */
-  --surface-3: oklch(25% 0.01 250);
+/* Define surface colors in your theme */
+@theme {
+  --color-surface-1: oklch(0.15 0.01 250);
+  --color-surface-2: oklch(0.20 0.01 250);  /* "Higher" = lighter */
+  --color-surface-3: oklch(0.25 0.01 250);
+}
 
-  /* Reduce text weight slightly */
-  --body-weight: 350;  /* Instead of 400 */
+/* Override for dark mode using Tailwind's dark variant or custom variant */
+.dark {
+  --color-surface-1: oklch(0.15 0.01 250);
+  --color-surface-2: oklch(0.20 0.01 250);
+  --color-surface-3: oklch(0.25 0.01 250);
 }
 ```
 
 ### Token Hierarchy
 
-Use two layers: primitive tokens (`--blue-500`) and semantic tokens (`--color-primary: var(--blue-500)`). For dark mode, only redefine the semantic layer—primitives stay the same.
+Use two layers: primitive tokens (`--color-blue-500`) and semantic tokens. Reference primitives with `var()`:
+
+```css
+@theme {
+  --color-primary: var(--color-blue-500);
+}
+```
+
+For dark mode, override semantic tokens via the `dark` variant or CSS custom properties—primitives stay the same.
 
 ## Alpha Is A Design Smell
 
