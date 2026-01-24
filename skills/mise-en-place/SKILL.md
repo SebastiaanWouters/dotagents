@@ -35,7 +35,7 @@ If chef is not explicitly requested, use built-in conversation mode.
 |-------|---------|--------|
 | **0. Bootstrap** | Read existing spec file as starting point | Context for discovery |
 | **1. Discovery** | Adaptive interview to fill gaps | `docs/SPEC.md` |
-| **2. Design System** | Create visual/component foundation | `docs/DESIGN_SYSTEM.md` |
+| **2. Design System** | Create visual/component foundation | `docs/design/` folder |
 | **3. Research** | Prime knowledge base with stack docs | Compound store |
 | **4. Initialize** | Set up agent guidelines for implementation | `AGENTS.md` |
 
@@ -207,82 +207,209 @@ For each provided resource:
 - **GitHub repos** — Check for existing design tokens, theme configs, component patterns
 - **Design systems** — If referencing known systems (Tailwind, Radix, shadcn), pull their conventions
 
-### Generate `docs/DESIGN_SYSTEM.md`
+### Generate `docs/design/` folder
 
-Create a comprehensive design system document:
+Create a modular design system with separate files for each concern:
 
-#### 1. Design Tokens
-```
-Colors:
-  - Primary: [hex] — usage
-  - Secondary: [hex] — usage
-  - Accent: [hex] — usage
-  - Background: [hex]
-  - Surface: [hex]
-  - Text: [hex primary, hex secondary, hex muted]
-  - Border: [hex]
-  - Error/Success/Warning: [hex each]
-
-Typography:
-  - Font families (headings, body, mono)
-  - Scale (xs, sm, base, lg, xl, 2xl, etc.)
-  - Line heights
-  - Font weights
-
-Spacing:
-  - Base unit (e.g., 4px or 0.25rem)
-  - Scale (1, 2, 3, 4, 6, 8, 12, 16, etc.)
-
-Border Radius:
-  - none, sm, md, lg, full
-
-Shadows:
-  - sm, md, lg, xl
-
-Breakpoints:
-  - sm, md, lg, xl, 2xl
+```bash
+mkdir -p docs/design
 ```
 
-#### 2. Component Patterns
-Define patterns for core UI elements:
-- Buttons (variants: primary, secondary, ghost, destructive; sizes: sm, md, lg)
-- Inputs (text, select, checkbox, radio, toggle)
-- Cards (with header, body, footer patterns)
-- Modals/Dialogs
-- Navigation (header, sidebar, tabs, breadcrumbs)
-- Lists & Tables
-- Loading states (skeleton, spinner)
-- Empty states
-- Error states
-- Notifications/Toasts
+#### 1. `docs/design/tokens.md` — Design Tokens
 
-#### 3. Layout Patterns
-- Page layouts (sidebar, stacked, centered)
-- Grid systems
-- Container widths
-- Responsive behavior
+```markdown
+---
+updated: YYYY-MM-DD
+---
 
-#### 4. Iconography
-- Icon library choice (Lucide, Heroicons, etc.)
-- Size conventions
-- Usage patterns
+# Design Tokens
 
-#### 5. Motion & Animation
-- Transition durations (fast, normal, slow)
-- Easing curves
-- Animation patterns (fade, slide, scale)
+## Colors
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--color-primary` | oklch(...) | CTAs, links, active states |
+| `--color-secondary` | oklch(...) | Secondary actions |
+| `--color-surface` | oklch(...) | Card backgrounds |
+| `--color-background` | oklch(...) | Page background |
+| `--color-text` | oklch(...) | Body text |
+| `--color-text-muted` | oklch(...) | Secondary text |
+| `--color-border` | oklch(...) | Borders, dividers |
+| `--color-error` | oklch(...) | Error states |
+| `--color-success` | oklch(...) | Success states |
+| `--color-warning` | oklch(...) | Warning states |
 
-#### 6. Dark Mode (if applicable)
-- Token overrides for dark theme
-- Component adjustments
+## Typography
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--font-display` | 'Font Name', serif | Headings |
+| `--font-body` | 'Font Name', sans-serif | Body text |
+| `--font-mono` | 'Font Name', monospace | Code |
+| `--text-xs` | 0.75rem | Small labels |
+| `--text-sm` | 0.875rem | Secondary text |
+| `--text-base` | 1rem | Body text |
+| `--text-lg` | 1.125rem | Emphasis |
+| `--text-xl` | 1.25rem | Subheadings |
+| `--text-2xl` | 1.5rem | Headings |
+| `--text-3xl` | 2rem | Large headings |
+
+## Spacing
+| Token | Value |
+|-------|-------|
+| `--space-1` | 0.25rem |
+| `--space-2` | 0.5rem |
+| `--space-3` | 0.75rem |
+| `--space-4` | 1rem |
+| `--space-6` | 1.5rem |
+| `--space-8` | 2rem |
+| `--space-12` | 3rem |
+| `--space-16` | 4rem |
+
+## Border Radius
+| Token | Value |
+|-------|-------|
+| `--radius-sm` | 4px |
+| `--radius-md` | 8px |
+| `--radius-lg` | 12px |
+| `--radius-full` | 9999px |
+
+## Shadows
+| Token | Value |
+|-------|-------|
+| `--shadow-sm` | 0 1px 2px oklch(0% 0 0 / 0.05) |
+| `--shadow-md` | 0 4px 6px oklch(0% 0 0 / 0.1) |
+| `--shadow-lg` | 0 10px 15px oklch(0% 0 0 / 0.1) |
+| `--shadow-xl` | 0 20px 25px oklch(0% 0 0 / 0.15) |
+
+## Breakpoints
+| Token | Value |
+|-------|-------|
+| `--bp-sm` | 640px |
+| `--bp-md` | 768px |
+| `--bp-lg` | 1024px |
+| `--bp-xl` | 1280px |
+| `--bp-2xl` | 1536px |
+```
+
+#### 2. `docs/design/components.md` — Component Patterns
+
+```markdown
+---
+updated: YYYY-MM-DD
+---
+
+# Component Patterns
+
+## Buttons
+- **Primary**: solid bg `--color-primary`, white text
+- **Secondary**: border `--color-primary`, transparent bg
+- **Ghost**: no border, subtle hover bg
+- **Destructive**: `--color-error` bg, white text
+- Sizes: sm (h-8), md (h-10), lg (h-12)
+- All: `--radius-sm`, appropriate padding
+
+## Inputs
+- Height: 40px (md), 36px (sm), 48px (lg)
+- Border: 1px `--color-border`
+- Focus: 2px ring `--color-primary`
+- Error: border `--color-error`
+- Labels above, `--space-1` gap
+
+## Cards
+- Background: `--color-surface`
+- Border: 1px `--color-border`
+- Radius: `--radius-md`
+- Padding: `--space-4` to `--space-6`
+
+## Modals/Dialogs
+- Backdrop: black/50%
+- Radius: `--radius-lg`
+- Shadow: `--shadow-xl`
+- Max-width: 500px (sm), 700px (md), 900px (lg)
+
+## Navigation
+- Header height: 64px
+- Sidebar width: 280px (expanded), 64px (collapsed)
+- Active indicator: `--color-primary`
+
+## Loading States
+- Skeleton: animated gradient
+- Spinner: `--color-primary`
+
+## Empty States
+- Centered, icon + heading + description + action
+
+## Notifications/Toasts
+- Position: bottom-right
+- Duration: 5000ms default
+- Variants: info, success, warning, error
+```
+
+#### 3. `docs/design/layout.md` — Layout Patterns
+
+```markdown
+---
+updated: YYYY-MM-DD
+---
+
+# Layout Patterns
+
+## Container
+- Max-width: 1280px
+- Padding: `--space-4` (mobile), `--space-8` (desktop)
+- Centered with auto margins
+
+## Page Layouts
+- **Sidebar**: 280px fixed left, fluid content
+- **Stacked**: header → main → footer (vertical)
+- **Centered**: constrained content width, centered
+
+## Grid System
+- 12-column base
+- Gap: `--space-4` default
+- Responsive columns: 1 (mobile) → 2-3 (tablet) → 4+ (desktop)
+
+## Responsive Behavior
+- Mobile-first approach
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+```
+
+#### 4. `docs/design/motion.md` — Motion & Animation
+
+```markdown
+---
+updated: YYYY-MM-DD
+---
+
+# Motion & Animation
+
+## Durations
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--duration-fast` | 150ms | Micro-interactions |
+| `--duration-normal` | 300ms | Standard transitions |
+| `--duration-slow` | 500ms | Complex animations |
+
+## Easing
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--ease-default` | cubic-bezier(0.4, 0, 0.2, 1) | General purpose |
+| `--ease-in` | cubic-bezier(0.4, 0, 1, 1) | Enter |
+| `--ease-out` | cubic-bezier(0, 0, 0.2, 1) | Exit |
+
+## Animation Patterns
+- **Fade**: opacity 0 → 1
+- **Slide**: translateY(8px) → 0
+- **Scale**: scale(0.95) → 1
+- **Stagger**: 50ms delay between items
+```
 
 ### Integration with Tech Stack
 
-Based on the chosen styling approach:
-- **Tailwind** — Generate `tailwind.config.js` theme extension
-- **CSS Variables** — Generate `:root` variable definitions
-- **styled-components/emotion** — Generate theme object
-- **Component library (shadcn, Radix)** — Document customization approach
+Based on the chosen styling approach, also generate:
+- **Tailwind** — `tailwind.config.js` theme extension referencing tokens
+- **CSS Variables** — `:root` variable definitions matching tokens.md
+- **styled-components/emotion** — Theme object matching tokens
+- **Component library (shadcn, Radix)** — Customization notes in components.md
 
 ---
 

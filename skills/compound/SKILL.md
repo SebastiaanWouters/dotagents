@@ -153,16 +153,14 @@ ls docs/**/*.md | sort | uniq -d
 
 ### Design System Location
 
-**Primary (mise-en-place generated):**
-- `docs/DESIGN_SYSTEM.md` — Single comprehensive file with all tokens, patterns, layouts
-
-**Secondary (granular structure):**
+All design system knowledge lives in `docs/design/`:
 
 | File | Purpose | Example Content |
 |------|---------|-----------------|
-| `docs/design/tokens.md` | Design tokens | Colors, spacing, typography, shadows |
+| `docs/design/tokens.md` | Design tokens | Colors, spacing, typography, shadows, breakpoints |
 | `docs/design/components.md` | Component patterns | Button variants, card styles, form inputs |
-| `docs/design/layout.md` | Layout conventions | Grid systems, page structures, breakpoints |
+| `docs/design/layout.md` | Layout conventions | Grid systems, page structures, responsive behavior |
+| `docs/design/motion.md` | Animation & transitions | Durations, easing curves, animation patterns |
 | `docs/design/decisions.md` | Design rationale | Why X font, why Y color palette |
 
 ### Compound Design Retrieve
@@ -170,121 +168,157 @@ ls docs/**/*.md | sort | uniq -d
 **Before building ANY UI component:**
 
 ```bash
-# Check for mise-en-place generated design system FIRST
-cat docs/DESIGN_SYSTEM.md 2>/dev/null
+# Check for design system folder
+ls docs/design/ 2>/dev/null
 
-# If not found, check granular structure
-ls docs/design/ 2>/dev/null && cat docs/design/tokens.md 2>/dev/null
+# Load tokens first (always required)
+cat docs/design/tokens.md 2>/dev/null
+
+# Load component patterns if building components
+cat docs/design/components.md 2>/dev/null
+
+# Load layout patterns if building pages
+cat docs/design/layout.md 2>/dev/null
 ```
-
-**Priority order:**
-1. `docs/DESIGN_SYSTEM.md` (mise-en-place generated) — load this if it exists
-2. `docs/design/` directory — fallback for granular structure
 
 **If no design system exists:** Run mise-en-place Phase 2, or create one during first UI work. Don't proceed with UI without establishing tokens.
 
 ### Compound Design Store
 
-**After making UI decisions, persist them.**
+**After making UI decisions, persist them to `docs/design/`.**
 
-#### If `docs/DESIGN_SYSTEM.md` exists (mise-en-place generated)
+#### Step 1: Check for existing design system
 
-**UPDATE the existing file** — don't create separate files. The mise-en-place format includes:
-
-```markdown
-# docs/DESIGN_SYSTEM.md sections:
-- Design Tokens (Colors, Typography, Spacing, Border Radius, Shadows, Breakpoints)
-- Component Patterns (Buttons, Inputs, Cards, etc.)
-- Layout Patterns
-- Iconography
-- Motion & Animation
-- Dark Mode (if applicable)
+```bash
+ls docs/design/ 2>/dev/null
 ```
 
-**When storing new design knowledge:**
-1. Read the existing `docs/DESIGN_SYSTEM.md`
-2. Find the relevant section
-3. ADD or UPDATE entries — never duplicate
-4. Keep the mise-en-place structure intact
+If exists, UPDATE the relevant file. If not, create the structure.
 
-#### If no design system exists (creating from scratch)
-
-Create `docs/DESIGN_SYSTEM.md` following mise-en-place format:
+#### Step 2: Store tokens in `docs/design/tokens.md`
 
 ```markdown
-# Design System
 ---
 updated: 2024-01-23
 ---
 
-## Design Tokens
+# Design Tokens
 
-### Colors
+## Colors
 | Token | Value | Usage |
 |-------|-------|-------|
-| Primary | oklch(55% 0.18 250) | CTAs, links, active states |
-| Surface | oklch(98% 0.01 250) | Card backgrounds |
-| Text | oklch(20% 0.02 250) | Body text |
-| Muted | oklch(50% 0.01 250) | Secondary text |
+| `--color-primary` | oklch(55% 0.18 250) | CTAs, links, active states |
+| `--color-surface` | oklch(98% 0.01 250) | Card backgrounds |
+| `--color-text` | oklch(20% 0.02 250) | Body text |
+| `--color-muted` | oklch(50% 0.01 250) | Secondary text |
+| `--color-border` | oklch(90% 0.01 250) | Borders, dividers |
+| `--color-error` | oklch(55% 0.2 25) | Error states |
+| `--color-success` | oklch(55% 0.15 145) | Success states |
 
-### Typography
-| Property | Value |
-|----------|-------|
-| Font (headings) | 'Instrument Serif', serif |
-| Font (body) | 'Inter', sans-serif |
-| Base size | clamp(1rem, 0.95rem + 0.25vw, 1.125rem) |
-| Scale | xs, sm, base, lg, xl, 2xl |
+## Typography
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--font-display` | 'Instrument Serif', serif | Headings |
+| `--font-body` | 'Inter', sans-serif | Body text |
+| `--font-mono` | 'JetBrains Mono', monospace | Code |
+| `--text-xs` | 0.75rem | Small labels |
+| `--text-sm` | 0.875rem | Secondary text |
+| `--text-base` | 1rem | Body text |
+| `--text-lg` | 1.125rem | Emphasis |
+| `--text-xl` | 1.25rem | Subheadings |
+| `--text-2xl` | 1.5rem | Headings |
 
-### Spacing
-| Size | Value |
-|------|-------|
-| 1 | 0.25rem |
-| 2 | 0.5rem |
-| 4 | 1rem |
-| 8 | 2rem |
-| 16 | 4rem |
+## Spacing
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--space-1` | 0.25rem | Tight groupings |
+| `--space-2` | 0.5rem | Related items |
+| `--space-4` | 1rem | Default gap |
+| `--space-6` | 1.5rem | Medium separation |
+| `--space-8` | 2rem | Section separation |
+| `--space-12` | 3rem | Large separation |
+| `--space-16` | 4rem | Major divisions |
 
-### Border Radius
-| Size | Value |
-|------|-------|
-| sm | 4px |
-| md | 8px |
-| lg | 12px |
-| full | 9999px |
+## Border Radius
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--radius-sm` | 4px | Buttons, inputs |
+| `--radius-md` | 8px | Cards |
+| `--radius-lg` | 12px | Modals |
+| `--radius-full` | 9999px | Avatars, pills |
 
-### Shadows
-| Size | Value |
-|------|-------|
-| sm | 0 1px 2px oklch(0% 0 0 / 0.05) |
-| md | 0 4px 6px oklch(0% 0 0 / 0.1) |
+## Shadows
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--shadow-sm` | 0 1px 2px oklch(0% 0 0 / 0.05) | Subtle elevation |
+| `--shadow-md` | 0 4px 6px oklch(0% 0 0 / 0.1) | Cards |
+| `--shadow-lg` | 0 10px 15px oklch(0% 0 0 / 0.1) | Modals, dropdowns |
 
-## Component Patterns
+## Breakpoints
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--bp-sm` | 640px | Mobile landscape |
+| `--bp-md` | 768px | Tablet |
+| `--bp-lg` | 1024px | Desktop |
+| `--bp-xl` | 1280px | Wide desktop |
+```
 
-### Buttons
-- Primary: solid bg, primary color, white text
-- Secondary: border only, primary border/text
-- Ghost: no border, subtle hover bg
-- All: radius-sm, 0.5rem 1rem padding
+#### Step 3: Store component patterns in `docs/design/components.md`
 
-### Cards
-- Surface color bg, radius-md
-- Padding: spacing-4 to spacing-8
+```markdown
+---
+updated: 2024-01-23
+---
+
+# Component Patterns
+
+## Buttons
+- **Primary**: solid bg `--color-primary`, white text
+- **Secondary**: border only, `--color-primary` border/text
+- **Ghost**: no border, subtle hover bg
+- **Destructive**: `--color-error` bg, white text
+- All: `--radius-sm`, `--space-2` `--space-4` padding
+
+## Cards
+- `--color-surface` bg, `--radius-md`
+- Padding: `--space-4` to `--space-6`
+- Border: 1px `--color-border`
 - NO nested cards, NO excessive shadows
 
-### Forms
-- Labels above inputs, spacing-1 gap
-- Inputs: border, radius-sm, spacing-2 padding
-- Error states: red tint, message below
+## Forms
+- Labels above inputs, `--space-1` gap
+- Inputs: 1px border, `--radius-sm`, `--space-2` padding
+- Focus: 2px ring `--color-primary`
+- Error: border `--color-error`, message below
 
-## Layout Patterns
-- Container max-width: 1280px
-- Sidebar width: 280px
-- Page padding: spacing-4 (mobile), spacing-8 (desktop)
+## Navigation
+- Header height: 64px
+- Sidebar width: 280px (collapsible to 64px)
+- Active state: `--color-primary` accent
+```
 
-## Motion & Animation
-- Duration (fast): 150ms
-- Duration (normal): 300ms
-- Easing: cubic-bezier(0.4, 0, 0.2, 1)
+#### Step 4: Store layout patterns in `docs/design/layout.md`
+
+```markdown
+---
+updated: 2024-01-23
+---
+
+# Layout Patterns
+
+## Container
+- Max-width: 1280px
+- Padding: `--space-4` (mobile), `--space-8` (desktop)
+
+## Page Layouts
+- **Sidebar**: 280px fixed left, fluid content
+- **Stacked**: header, main content, footer
+- **Centered**: max-width content, centered
+
+## Grid
+- 12-column base grid
+- Gap: `--space-4` default
+- Responsive: 1 col mobile, 2-3 col tablet, 4+ col desktop
 ```
 
 ### Compound Design Sync
@@ -293,23 +327,19 @@ updated: 2024-01-23
 
 1. **Load the design system first**
    ```bash
-   # Primary: mise-en-place generated
-   cat docs/DESIGN_SYSTEM.md 2>/dev/null
-
-   # Fallback: granular structure
-   cat docs/design/tokens.md docs/design/components.md 2>/dev/null
+   cat docs/design/tokens.md docs/design/components.md docs/design/layout.md 2>/dev/null
    ```
 
 2. **Verify consistency before writing UI**
-   - Use exact token names from Design Tokens section
-   - Follow component patterns exactly
-   - Match existing layout conventions
+   - Use exact token names from `tokens.md` (e.g., `var(--color-primary)`)
+   - Follow component patterns from `components.md`
+   - Match layout conventions from `layout.md`
 
 3. **Update design system if extending**
-   - Adding a new component variant? Update Component Patterns section
-   - Need a new spacing value? Add to Design Tokens section with rationale
+   - Adding a new color? Update `docs/design/tokens.md`
+   - New component variant? Update `docs/design/components.md`
+   - New layout pattern? Update `docs/design/layout.md`
    - Never create one-off values—extend the system or reuse existing
-   - **Always update the existing file**—don't create parallel structures
 
 ### Design System Anti-Patterns
 
@@ -340,7 +370,7 @@ padding: var(--space-md);
 # Just start coding...
 
 # Right - always check first
-cat docs/DESIGN_SYSTEM.md  # or docs/design/tokens.md
+cat docs/design/tokens.md
 # Then build using those tokens
 ```
 
@@ -349,17 +379,18 @@ cat docs/DESIGN_SYSTEM.md  # or docs/design/tokens.md
 /* Wrong - tokens scattered in code */
 /* Primary color: #3b82f6, spacing: 16px */
 
-/* Right - centralized in docs/DESIGN_SYSTEM.md */
+/* Right - centralized in docs/design/tokens.md */
 ```
 
-❌ **Creating parallel design systems**
-```bash
-# Wrong - mise-en-place created DESIGN_SYSTEM.md but you create docs/design/
-docs/DESIGN_SYSTEM.md  # exists from mise-en-place
-docs/design/tokens.md  # DON'T create this too!
+❌ **Creating tokens outside the system**
+```css
+/* Wrong - one-off values */
+padding: 18px;
+color: #4a7c59;
 
-# Right - update the existing file
-# Edit docs/DESIGN_SYSTEM.md directly
+/* Right - use or extend the system */
+padding: var(--space-4);  /* existing token */
+/* Or add to docs/design/tokens.md first */
 ```
 
 ---
@@ -419,23 +450,25 @@ edit docs/gotchas/jwt-refresh-edge-cases.md
 - [ ] Verify no duplicates created
 
 ### Design Retrieve Checklist
-- [ ] Check for `docs/DESIGN_SYSTEM.md` first (mise-en-place)
-- [ ] Fallback: check `docs/design/` directory
-- [ ] Load the full design system before any UI work
+- [ ] Check for `docs/design/` folder
+- [ ] Load `tokens.md` first (always required)
+- [ ] Load `components.md` if building components
+- [ ] Load `layout.md` if building pages
 - [ ] If no design system, run mise-en-place or create one
 
 ### Design Store Checklist
-- [ ] Check which format exists (DESIGN_SYSTEM.md vs docs/design/)
-- [ ] UPDATE existing file—never create parallel structures
-- [ ] Add new tokens/patterns to appropriate sections
-- [ ] Keep mise-en-place structure if that's what exists
+- [ ] Check if `docs/design/` exists
+- [ ] Create folder structure if missing
+- [ ] Store tokens in `tokens.md`
+- [ ] Store component patterns in `components.md`
+- [ ] Store layout patterns in `layout.md`
 - [ ] Update `updated:` date in frontmatter
 
 ### Design Sync Checklist
-- [ ] Load design system before new page
-- [ ] Use exact token names (no hardcoded values)
+- [ ] Load all design files before new page
+- [ ] Use exact token names (`var(--color-primary)`)
 - [ ] Follow component patterns exactly
-- [ ] If extending: update existing design file, don't create one-offs
-- [ ] Never create `docs/design/` if `DESIGN_SYSTEM.md` exists
+- [ ] If extending: update the appropriate file in `docs/design/`
+- [ ] Never use hardcoded values—extend the system
 
 
