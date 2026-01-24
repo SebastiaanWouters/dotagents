@@ -19,18 +19,6 @@ Efficient project knowledge and design system management. Retrieve context fast,
 
 ---
 
-## Docs Initialization
-
-When a project has no `docs/` folder yet, create only the subfolders you need:
-
-```bash
-mkdir -p docs/arch docs/decisions docs/gotchas docs/patterns docs/integrations docs/design
-```
-
-**No README.md needed.** This skill IS the documentation for how to use `docs/`. Creating a `docs/README.md` duplicates knowledge already here.
-
----
-
 ## Compound Retrieve
 
 **Goal:** Get relevant context in <30 seconds with minimal token waste.
