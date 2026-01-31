@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "taskSource": {
+    "type": "prd-markdown",
+    "path": "tasks/prd-user-profile.md"
+  },
+  "prompt": "Implement the next user story from the PRD. Read the PRD markdown file, find the first user story (US-XXX) with unchecked acceptance criteria, implement it, check off all acceptance criteria boxes in the PRD file, run quality checks, and commit. Then create a new session to continue with the next story.",
+  "harness": {
+    "type": "generic",
+    "newSessionCommand": "/new"
+  },
+  "qualityChecks": {
+    "typecheck": "npm run typecheck",
+    "test": "npm run test",
+    "lint": "npm run lint"
+  },
+  "progressFile": "scripts/ralph/progress.json"
+}

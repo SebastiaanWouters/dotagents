@@ -1,0 +1,63 @@
+{
+  "feature": "Example Feature - User Profile",
+  "description": "Add user profile page with avatar upload and bio editing",
+  "tasks": [
+    {
+      "id": "profile-1",
+      "title": "Create user profiles table migration",
+      "description": "Add database table to store user profile data.\n\n**What to do:**\n- Create migration for user_profiles table\n- Columns: user_id (FK), bio (text), avatar_url (string), updated_at\n- Add index on user_id\n\n**Files:**\n- migrations/003_user_profiles.sql\n\n**Acceptance criteria:**\n- Migration runs successfully\n- Table has correct columns\n- Foreign key to users table\n- Typecheck passes",
+      "dependencies": [],
+      "status": "open",
+      "acceptanceCriteria": [
+        "Migration runs successfully",
+        "Table has correct columns",
+        "Foreign key to users table",
+        "Typecheck passes"
+      ]
+    },
+    {
+      "id": "profile-2",
+      "title": "Create profile API endpoints",
+      "description": "Add GET and PUT endpoints for user profile.\n\n**What to do:**\n- GET /api/profile - returns current user's profile\n- PUT /api/profile - updates bio and avatar_url\n- Validate input data\n- Return 404 if profile doesn't exist\n\n**Files:**\n- src/routes/profile.ts\n- src/routes/__tests__/profile.test.ts\n\n**Acceptance criteria:**\n- GET returns profile data\n- PUT updates profile\n- Validates required fields\n- Tests pass",
+      "dependencies": ["profile-1"],
+      "status": "open",
+      "acceptanceCriteria": [
+        "GET returns profile data",
+        "PUT updates profile",
+        "Validates required fields",
+        "Tests pass",
+        "Typecheck passes"
+      ]
+    },
+    {
+      "id": "profile-3",
+      "title": "Build profile page UI",
+      "description": "Create React component for profile editing.\n\n**What to do:**\n- Create ProfilePage component\n- Display current bio and avatar\n- Edit form with bio textarea\n- Save button with loading state\n- Show success/error messages\n\n**Files:**\n- src/pages/ProfilePage.tsx\n- src/pages/__tests__/ProfilePage.test.tsx\n\n**Acceptance criteria:**\n- Displays current profile data\n- Bio field is editable\n- Save button updates profile\n- Shows loading state during save\n- Tests pass",
+      "dependencies": ["profile-2"],
+      "status": "open",
+      "acceptanceCriteria": [
+        "Displays current profile data",
+        "Bio field is editable",
+        "Save button updates profile",
+        "Shows loading state during save",
+        "Tests pass",
+        "Typecheck passes"
+      ]
+    },
+    {
+      "id": "profile-4",
+      "title": "Add avatar upload functionality",
+      "description": "Implement avatar image upload.\n\n**What to do:**\n- Add file input for avatar\n- Upload to storage service\n- Update avatar_url in profile\n- Validate file type and size\n- Show preview before upload\n\n**Files:**\n- src/components/AvatarUpload.tsx\n- src/services/storage.ts\n\n**Acceptance criteria:**\n- File input accepts images\n- Validates file size (< 2MB)\n- Uploads to storage\n- Updates profile with new URL\n- Shows preview",
+      "dependencies": ["profile-3"],
+      "status": "open",
+      "acceptanceCriteria": [
+        "File input accepts images",
+        "Validates file size (< 2MB)",
+        "Uploads to storage",
+        "Updates profile with new URL",
+        "Shows preview",
+        "Typecheck passes"
+      ]
+    }
+  ]
+}

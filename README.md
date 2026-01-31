@@ -145,7 +145,7 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 
 | Skill | Purpose |
 |-------|---------|
-| `ralph` | Alternative autonomous loop with different setup phase |
+| `ralph` | Recursive task execution - compatible with PRD markdown from `/prd` command |
 | `e2e-tester` | UI testing during QA phase (if ticket involves frontend) |
 
 ---
@@ -161,7 +161,7 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 | `compound` | Knowledge retrieval/storage + design system | "compound retrieve", "compound store" |
 | `ticket` | Manage tickets with tk CLI | "create ticket", "what's next" |
 | `bullet-tracer` | Implement features via vertical slices | Auto-loaded by simp.sh |
-| `ralph` | Autonomous feature development loop | "run ralph", "start the loop" |
+| `ralph` | Recursive task execution - works with PRD markdown, JSON, or task_list | "run ralph", "start the loop" |
 
 ### Browser Automation
 

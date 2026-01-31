@@ -1,171 +1,422 @@
 # Ralph Execution Loop
 
-The autonomous loop that implements tasks one by one.
+The recursive execution loop that implements tasks one by one, creating new sessions to continue until all tasks are complete.
+
+## Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Session N                                                  │
+│  1. Load config & progress                                  │
+│  2. Find next ready task                                    │
+│  3. Execute task + quality checks                           │
+│  4. Update progress.json                                    │
+│  5. Commit changes                                          │
+│  6. Generate session summary                                │
+│  7. Create Session N+1 with summary                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Session N+1                                                │
+│  1. Receive context from Session N                          │
+│  2. Load config & progress                                  │
+│  3. Find next ready task                                    │
+│  4. Execute task + quality checks                           │
+│  5. Update progress.json                                    │
+│  6. Commit changes                                          │
+│  7. Generate session summary                                │
+│  8. Create Session N+2 with summary                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                           [...]
+                              │
+                              ▼
+                    All tasks complete!
+```
 
 ## Loop Workflow
 
-### 0. Get the Parent Task ID
+### Step 0: Load Configuration
+
+Read `ralph.json` to get:
+- Task source configuration
+- Quality check commands
+- Harness type
+- Progress file path
 
 ```bash
-cat scripts/ralph/parent-task-id.txt
+# Read config
+cat ralph.json
 ```
 
-If this file doesn't exist, ask the user which parent task to work on.
+### Step 1: Load Progress
 
-**Check if this is a new feature:** Compare the parent task ID to the one in `scripts/ralph/progress.txt` header. If they differ (or progress.txt doesn't exist), reset progress.txt:
+Read existing progress or initialize new:
+
+```bash
+# Read or create progress
+cat scripts/ralph/progress.json 2>/dev/null || echo '{}'
+```
+
+**Progress JSON Structure:**
+
+```json
+{
+  "startedAt": "2026-01-31T10:00:00Z",
+  "feature": "User Authentication",
+  "completedTasks": ["auth-1"],
+  "currentTask": null,
+  "patterns": {
+    "database": "Use knex for migrations",
+    "testing": "Jest tests in __tests__/ folder"
+  },
+  "learnings": [
+    "bcrypt uses 10 rounds for password hashing",
+    "JWT tokens expire after 24 hours"
+  ]
+}
+```
+
+### Step 2: Find Next Ready Task
+
+**For PRD Markdown (from prd skill):**
+
+Parse the markdown file to extract user stories:
 
 ```markdown
-# Build Progress Log
-Started: [today's date]
-Feature: [parent task title]
+### US-001: Add priority field to database
+**Description:** As a developer, I need to store task priority...
 
-## Codebase Patterns
-(Patterns discovered during this feature build)
+**Acceptance Criteria:**
+- [ ] Add priority column to tasks table
+- [ ] Typecheck passes
 
----
+### US-002: Display priority indicator
 ```
 
-### 1. Check for Ready Tasks
+Convert to tasks with sequential dependencies:
+- US-001: dependencies = []
+- US-002: dependencies = ["US-001"]
+- US-003: dependencies = ["US-002"]
 
-The task hierarchy may have multiple levels (parent → container → leaf tasks).
+Check acceptance criteria checkboxes to determine status:
+- All criteria checked = "completed"
+- Any unchecked = "open"
 
-**Step 1: Get all tasks for the repo**
-```
-task_list action: "list", repoURL: "<repo-url>", ready: true, status: "open", limit: 10
-```
+**For PRD JSON:**
 
-**Important:** Always use `limit` (5-10) to avoid context overflow.
-
-**Step 2: Build the descendant set**
-1. Find tasks where `parentID` equals the parent task ID (direct children)
-2. For each child found, recursively find their children
-3. Continue until no more descendants are found
-
-**Step 3: Filter to workable tasks**
-From the descendant set, select tasks that are:
-- `ready: true` (all dependencies satisfied)
-- `status: "open"`
-- Leaf tasks (no children of their own)
-
-**CRITICAL:** Skip container tasks that exist only to group other tasks.
-
-### 2. If No Ready Tasks
-
-Check if all descendant tasks are completed:
-- Query `task_list list` with `repoURL: "<repo-url>"` (no ready filter)
-- Build the full descendant set
-- If all leaf tasks are `completed`:
-  1. Archive progress.txt:
-     ```bash
-     DATE=$(date +%Y-%m-%d)
-     FEATURE="feature-name-here"
-     mkdir -p scripts/ralph/archive/$DATE-$FEATURE
-     mv scripts/ralph/progress.txt scripts/ralph/archive/$DATE-$FEATURE/
-     ```
-  2. Create fresh progress.txt with empty template
-  3. Clear parent-task-id.txt: `echo "" > scripts/ralph/parent-task-id.txt`
-  4. Commit: `git add scripts/ralph && git commit -m "chore: archive progress for [feature-name]"`
-  5. Mark the parent task as `completed`
-  6. Stop and report "✅ Build complete - all tasks finished!"
-- If some are blocked: Report which tasks are blocked and why
-
-### 3. If Ready Tasks Exist
-
-**Pick the next task:**
-- Prefer tasks related to what was just completed (same module/area)
-- If no prior context, pick the first ready task
-
-**Execute the task via handoff:**
-
-```
-Implement and verify task [task-id]: [task-title].
-
-[task-description]
-
-FIRST: Read scripts/ralph/progress.txt - check the "Codebase Patterns" section for important context from previous iterations.
-
-When complete:
-
-1. Run quality checks: typecheck and tests (use project's commands from AGENTS.md)
-   - If either fails, FIX THE ISSUES and re-run until both pass
-   - Do NOT proceed until quality checks pass
-
-2. Update AGENTS.md files if you learned something important:
-   - Check for AGENTS.md in directories where you edited files
-   - Add learnings that future developers/agents should know
-   - This is LONG-TERM memory
-   - Do NOT add task-specific details or temporary notes
-
-3. Update progress.txt (APPEND, never replace):
-   ## [Date] - [Task Title]
-   Thread: [current thread URL]
-   Task ID: [task-id]
-   - What was implemented
-   - Files changed
-   - **Learnings for future iterations:**
-     - Patterns discovered
-     - Gotchas encountered
-   ---
-
-4. If you discovered a reusable pattern for THIS FEATURE, add it to the `## Codebase Patterns` section at the TOP of progress.txt
-
-5. Commit all changes with message: `feat: [Task Title]`
-
-6. Mark task as completed: `task_list action: "update", taskID: "[task-id]", status: "completed"`
-
-7. Invoke the ralph skill to continue the loop
+```javascript
+// Algorithm
+const completed = progress.completedTasks || [];
+const ready = prd.tasks.filter(task => 
+  task.status === "open" &&
+  task.dependencies.every(dep => completed.includes(dep))
+);
 ```
 
----
+**For task_list:**
+
+```
+task_list action: "list", repoURL: "<repo>", ready: true, status: "open", limit: 10
+```
+
+Filter to descendants of parent task, pick first ready leaf task.
+
+### Step 3: Check Completion
+
+**If no ready tasks:**
+
+1. Check if all tasks completed
+2. Archive progress:
+   ```bash
+   DATE=$(date +%Y-%m-%d)
+   mkdir -p scripts/ralph/archive/$DATE
+   mv scripts/ralph/progress.json scripts/ralph/archive/$DATE/
+   ```
+3. Mark ralph.json as complete or clear parent task
+4. Report: "✅ All tasks complete!"
+
+**If blocked tasks exist:**
+- Report which tasks are blocked and why
+- Suggest resolving dependencies
+
+### Step 4: Execute Task
+
+Implement the selected task following its description.
+
+**Always do:**
+- Read relevant files first
+- Follow existing patterns from progress.json
+- Implement the smallest viable solution
+- Run quality checks
+
+### Step 5: Quality Checks
+
+Run all configured checks:
+
+```bash
+# Typecheck
+npm run typecheck
+
+# Tests
+npm run test
+
+# Lint
+npm run lint
+```
+
+**If any check fails:**
+- Fix the issues
+- Re-run checks
+- Do NOT proceed until all pass
+
+### Step 6: Update Task Status
+
+**For PRD Markdown:**
+
+Update the acceptance criteria checkboxes in the markdown file:
+
+```markdown
+### US-001: Add priority field to database
+**Description:** As a developer, I need to store task priority...
+
+**Acceptance Criteria:**
+- [x] Add priority column to tasks table
+- [x] Generate and run migration
+- [x] Typecheck passes
+```
+
+Change `[ ]` to `[x]` for all criteria when task is complete.
+
+**For PRD JSON:**
+
+```javascript
+// Update task status in prd.json
+task.status = "completed";
+```
+
+Write updated prd.json back to disk.
+
+**For task_list:**
+
+```
+task_list action: "update", taskID: "[task-id]", status: "completed"
+```
+
+### Step 7: Update Progress
+
+Append session results to progress.json:
+
+```json
+{
+  "completedTasks": ["auth-1", "auth-2"],
+  "currentTask": {
+    "id": "auth-2",
+    "title": "Implement password hashing",
+    "completedAt": "2026-01-31T10:30:00Z",
+    "filesChanged": ["src/auth/password.ts", "src/auth/__tests__/password.test.ts"],
+    "learnings": [
+      "bcrypt uses 10 rounds by default",
+      "Tests go in __tests__/ folder next to source"
+    ]
+  },
+  "patterns": {
+    "auth": "All auth utilities go in src/auth/",
+    "testing": "Jest tests in __tests__/ folder"
+  }
+}
+```
+
+### Step 8: Commit Changes
+
+```bash
+# Stage all changes
+git add .
+
+# Commit with task title
+git commit -m "feat: [Task Title]"
+```
+
+### Step 9: Generate Session Summary
+
+Create a summary for the next session:
+
+```markdown
+=== RALPH SESSION CONTEXT ===
+
+Original Prompt: [The prompt from ralph.json]
+
+Session Summary:
+- Task Completed: [task-id] - [task-title]
+- Files Changed: [list of files]
+- Quality Checks: ✅ All passed
+- Learnings:
+  - [Pattern 1]
+  - [Pattern 2]
+
+Progress: [N]/[Total] tasks complete
+- Completed: [list]
+- Ready: [list]
+- Blocked: [list]
+
+Next Ready Task: [next-task-id] - [next-task-title]
+
+INSTRUCTIONS FOR NEXT SESSION:
+1. Read ralph.json configuration
+2. Read scripts/ralph/progress.json for full context
+3. Execute the next ready task: [next-task-title]
+4. Run all quality checks from ralph.json
+5. Update progress.json and task status
+6. Commit changes with message: "feat: [Task Title]"
+7. Create new session using your harness's method:
+   - Generic: /new [updated context]
+   - Amp: Use handoff with this context
+8. Continue until all tasks complete
+
+Use the ralph skill when ready to continue.
+```
+
+### Step 10: Create New Session
+
+**Generic Harness (opencode, claude, etc.):**
+
+```
+/new [SESSION_SUMMARY_FROM_STEP_9]
+```
+
+**Amp Harness:**
+
+Use amp's built-in handoff mechanism with the session summary as context.
+
+## Session Handoff Examples
+
+### Example 1: Generic Harness (opencode)
+
+**Session 1 completes task auth-1:**
+
+```
+/new === RALPH SESSION CONTEXT ===
+
+Original Prompt: Implement the next authentication task from prd.json
+
+Session Summary:
+- Task Completed: auth-1 - Create users table migration
+- Files Changed: migrations/001_users.sql
+- Quality Checks: ✅ All passed
+- Learnings:
+  - Use knex for migrations
+  - Place migrations in migrations/ folder
+
+Progress: 1/3 tasks complete
+- Completed: [auth-1]
+- Ready: [auth-2]
+- Blocked: [auth-3]
+
+Next Ready Task: auth-2 - Implement password hashing
+
+INSTRUCTIONS FOR NEXT SESSION:
+1. Read ralph.json configuration
+2. Read scripts/ralph/progress.json for full context
+3. Execute the next ready task: auth-2
+4. Run all quality checks from ralph.json
+5. Update progress.json and task status
+6. Commit changes with message: "feat: auth-2"
+7. Create new session using: /new [updated context]
+8. Continue until all tasks complete
+
+Use the ralph skill when ready to continue.
+```
+
+**Session 2 receives context and continues...**
+
+### Example 2: Amp Harness
+
+Uses amp's native handoff with the same session summary format.
 
 ## Progress File Format
 
-```markdown
-# Build Progress Log
-Started: [date]
-Feature: [feature name]
-Parent Task: [parent-task-id]
+**Location:** `scripts/ralph/progress.json`
 
-## Codebase Patterns
-(Patterns discovered during this feature build)
-
----
-
-## [Date] - [Task Title]
-Thread: https://ampcode.com/threads/[thread-id]
-Task ID: [id]
-- What was implemented
-- Files changed
-- **Learnings for future iterations:**
-  - Patterns discovered
-  - Gotchas encountered
----
+```json
+{
+  "version": "1.0",
+  "startedAt": "2026-01-31T10:00:00Z",
+  "feature": "User Authentication",
+  "taskSource": {
+    "type": "prd-json",
+    "path": "tasks/auth.json"
+  },
+  "completedTasks": ["auth-1", "auth-2"],
+  "currentTask": {
+    "id": "auth-2",
+    "title": "Implement password hashing",
+    "completedAt": "2026-01-31T10:30:00Z",
+    "filesChanged": [
+      "src/auth/password.ts",
+      "src/auth/__tests__/password.test.ts"
+    ],
+    "learnings": [
+      "bcrypt uses 10 rounds by default",
+      "Tests go in __tests__/ folder"
+    ]
+  },
+  "patterns": {
+    "database": "Use knex for all migrations",
+    "auth": "Auth utilities go in src/auth/",
+    "testing": "Jest tests in __tests__/ folder"
+  },
+  "stats": {
+    "total": 3,
+    "completed": 2,
+    "remaining": 1,
+    "blocked": 0
+  }
+}
 ```
-
-**Note:** When a new feature starts with a different parent task ID, reset progress.txt completely. Long-term learnings belong in AGENTS.md files.
-
----
 
 ## Task Discovery
 
-While working, **liberally create new tasks** when you discover:
-- Failing tests or test gaps
+While working, create new tasks when you discover:
+- Missing tests
 - Code that needs refactoring
-- Missing error handling
-- Documentation gaps
-- TODOs or FIXMEs in the code
-- Build/lint warnings
-- Performance issues
+- Error handling gaps
+- Documentation needs
+- TODOs in code
 
-Use `task_list action: "create"` immediately. Set appropriate `dependsOn` relationships.
+Add to prd.json or task_list immediately with appropriate dependencies.
 
----
+## Error Handling
 
-## Important Notes
+**Quality Check Failure:**
+- Fix issues in current session
+- Re-run checks
+- Do NOT create new session until passing
 
-- Always use `ready: true` when listing tasks to only get tasks with satisfied dependencies
-- Always use `limit: 5-10` when listing tasks to avoid context overflow
-- Each handoff runs in a fresh thread with clean context
-- Progress.txt is the memory between iterations - keep it updated
-- Prefer tasks in the same area as just-completed work for better context continuity
-- The handoff goal MUST include instructions to update progress.txt, commit, and re-invoke this skill
+**No Ready Tasks:**
+- Verify all dependencies are satisfied
+- Check for circular dependencies
+- Report blocked tasks to user
+
+**Config Error:**
+- Validate ralph.json syntax
+- Check task source exists
+- Verify quality commands work
+
+## Best Practices
+
+1. **Small Tasks** - Each task completable in one session
+2. **Clear Dependencies** - Explicit dependency chains
+3. **Pattern Documentation** - Record learnings in progress.json
+4. **Frequent Commits** - Commit after every task
+5. **Quality First** - Never skip quality checks
+
+## Stopping the Loop
+
+To stop gracefully:
+1. Complete current task
+2. Archive progress
+3. Clear ralph.json or mark complete
+
+Emergency stop: Delete ralph.json or set all tasks to "blocked"

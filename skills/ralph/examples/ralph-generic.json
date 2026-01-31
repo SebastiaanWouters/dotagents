@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "taskSource": {
+    "type": "prd-json",
+    "path": "examples/example-prd.json"
+  },
+  "prompt": "Implement the next ready task from the PRD. Ensure all quality checks pass (typecheck, tests, lint). Commit changes with a descriptive message. Update the task status to 'completed' in the PRD JSON file.",
+  "harness": {
+    "type": "generic",
+    "newSessionCommand": "/new"
+  },
+  "qualityChecks": {
+    "typecheck": "npm run typecheck",
+    "test": "npm run test",
+    "lint": "npm run lint"
+  },
+  "progressFile": "scripts/ralph/progress.json"
+}
