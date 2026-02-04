@@ -130,7 +130,8 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 | `compound` | Knowledge retrieval/storage from `docs/` |
 | `ticket` | Ticket management via `tk` CLI |
 | `bullet-tracer` | Implementation approach (vertical slices) |
-| `mise-en-place` | Setup phase: idea → spec → tickets (runs if no tickets exist) |
+| `mise-en-place` | Setup phase: idea/spec → prd.json via interview + research |
+| `ratatouille` | Implement PRD tasks one-by-one with tracer bullets + progress tracking |
 | `agents-md` | Initialize AGENTS.md with project guidelines |
 
 ### Usage
@@ -156,7 +157,8 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 
 | Skill | Description | Triggers |
 |-------|-------------|----------|
-| `mise-en-place` | Transform ideas → specs → tickets via interview | "prep my idea", "spec this out" |
+| `mise-en-place` | Transform idea/spec → prd.json via interview + research | "prep my idea", "spec this out", "mise-en-place:" |
+| `ratatouille` | Implement one prd.json task per iteration | "ratatouille:" |
 | `chef` | Telegram communication (blocking Q&A, notifications) | Loaded by simp.sh/ralph |
 | `compound` | Knowledge retrieval/storage + design system | "compound retrieve", "compound store" |
 | `ticket` | Manage tickets with tk CLI | "create ticket", "what's next" |
