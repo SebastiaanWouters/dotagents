@@ -7,29 +7,38 @@ description: Retrieves API keys, passwords, secrets from Bitwarden vault using b
 
 Retrieve secrets when environment variables are missing.
 
-## Quick Reference
+## CRITICAL: Source .env Before EVERY bw Command
+
+**EVERY `bw` command MUST be prefixed with sourcing .env** to load `BW_SESSION`:
 
 ```bash
-# Get password by name
-bw get password "item-name"
+# Standard prefix for ALL bw commands - copy this pattern exactly:
+source .env 2>/dev/null; bw <command>
+```
 
-# Get specific field
-bw get item "item-name" | jq -r '.fields[] | select(.name=="API_KEY") | .value'
+Example commands:
+```bash
+source .env 2>/dev/null; bw status
+source .env 2>/dev/null; bw list items --search "telegram"
+source .env 2>/dev/null; bw get password "item-name"
+source .env 2>/dev/null; bw get notes "item-name"
+```
 
-# Search items
-bw list items --search "github"
+If .env is in a parent directory, search up:
+```bash
+for dir in . .. ../.. ../../..; do [[ -f "$dir/.env" ]] && source "$dir/.env" && break; done; bw status
 ```
 
 ## Session Management
 
-Check status first:
+Check status (should show "unlocked" if BW_SESSION is valid):
 ```bash
-bw status
+source .env 2>/dev/null; bw status
 ```
 
-If locked, unlock and export session:
+If locked and BW_SESSION not in .env, unlock and save to .env:
 ```bash
-export BW_SESSION=$(bw unlock --raw)
+echo "BW_SESSION=$(bw unlock --raw)" >> .env
 ```
 
 ## Finding API Keys
