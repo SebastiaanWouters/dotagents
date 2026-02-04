@@ -42,6 +42,7 @@ Post-iteration action options:
 ### 2) Tracer-Bullet Implementation
 
 For the chosen task:
+Use a tracer bullet to build the **thinnest end-to-end vertical slice** that touches every needed layer. This code is **not a throwaway prototype**—it becomes the foundation you expand after validating the path works. Aim for one happy path, minimal data, and fast feedback before adding depth.
 1. Identify layers involved (UI, API, DB, config, tests).
 2. Build the **thinnest end-to-end slice** that works.
 3. Validate it (minimal integration test or manual check).
