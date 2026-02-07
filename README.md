@@ -19,7 +19,7 @@ Set up sebastiaanwouters/dotagents
 ```
 
 The agent will:
-1. **Interview you** — Which agent (Amp/Claude Code)? What workflows (simp.sh, mise-en-place)? Which skills needed?
+1. **Interview you** — Which agent (Amp/Claude Code)? What workflows (loopy, mise-en-place)? Which skills needed?
 2. **Clone the repo** — Fetch skills from GitHub
 3. **Copy skills** — Install to `.amp/skills/` or `.claude/skills/` based on your agent
 4. **Configure MCP** — Merge any required MCP server configs
@@ -42,8 +42,9 @@ Only skills with their **own scripts** (chef, picasso) require a specific runtim
 | Tool | Install | Used By |
 |------|---------|---------|
 | `bun` | [bun.sh](https://bun.sh) | chef scripts, picasso scripts, agent-browser |
-| `tk` | `go install github.com/wedow/ticket/cmd/tk@latest` | ticket, simp.sh |
-| `amp` | [ampcode.com](https://ampcode.com) | simp.sh, ralph |
+| `tk` | `go install github.com/wedow/ticket/cmd/tk@latest` | ticket |
+| `codex` | OpenAI Codex CLI | loopy |
+| `claude` | Anthropic Claude CLI | loopy |
 
 ### Optional Tools
 
@@ -85,7 +86,7 @@ BW_SESSION=your_session_key
 
 **"Everything in its place before cooking begins."**
 
-The `mise-en-place` skill transforms raw ideas into implementation-ready specs. It's automatically triggered by `simp.sh` when no tickets exist.
+The `mise-en-place` skill transforms raw ideas into implementation-ready specs.
 
 ### What It Does
 
@@ -118,9 +119,9 @@ The `mise-en-place` skill transforms raw ideas into implementation-ready specs. 
 
 ---
 
-## simp.sh — Autonomous Task Loop
+## loopy — Autonomous Task Loop
 
-Runs an autonomous loop: picks tickets, implements them, collects feedback via Telegram.
+Runs a simple autonomous loop by repeatedly executing a prompt file with your chosen agent CLI.
 
 ### Required Skills
 
@@ -137,17 +138,8 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 ### Usage
 
 ```bash
-./simp.sh
-# If no tickets exist → runs mise-en-place setup (interviews you via Telegram)
-# If tickets exist → runs main implementation loop
+./loopy --prompt /path/to/prompt.txt --agent codex --max-iterations 20
 ```
-
-### Related Skills
-
-| Skill | Purpose |
-|-------|---------|
-| `ralph` | Recursive task execution - compatible with PRD markdown from `/prd` command |
-| `e2e-tester` | UI testing during QA phase (if ticket involves frontend) |
 
 ---
 
@@ -159,11 +151,10 @@ Runs an autonomous loop: picks tickets, implements them, collects feedback via T
 |-------|-------------|----------|
 | `mise-en-place` | Transform idea/spec → prd.json via interview + research | "prep my idea", "spec this out", "mise-en-place:" |
 | `ratatouille` | Implement one prd.json task per iteration | "ratatouille:" |
-| `chef` | Telegram communication (blocking Q&A, notifications) | Loaded by simp.sh/ralph |
+| `chef` | Telegram communication (blocking Q&A, notifications) |
 | `compound` | Knowledge retrieval/storage + design system | "compound retrieve", "compound store" |
 | `ticket` | Manage tickets with tk CLI | "create ticket", "what's next" |
-| `bullet-tracer` | Implement features via vertical slices | Auto-loaded by simp.sh |
-| `ralph` | Recursive task execution - works with PRD markdown, JSON, or task_list | "run ralph", "start the loop" |
+| `bullet-tracer` | Implement features via vertical slices |
 
 ### Browser Automation
 
@@ -244,7 +235,7 @@ MCP configs are in `skills/<skill>/mcp.json`.
 dotagents/
 ├── README.md
 ├── AGENTS.md           # Project guidelines for agents
-├── simp.sh             # Autonomous task loop
+├── loopy               # Autonomous task loop
 └── skills/
     ├── mise-en-place/  # Project setup workflow
     ├── chef/           # Telegram communication

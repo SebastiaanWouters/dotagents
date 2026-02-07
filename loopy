@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+agent="codex"
+max_iterations=20
+prompt_file=""
+
+usage() {
+  cat <<'USAGE'
+Usage: loopy --prompt FILE [--agent codex|claude] [--max-iterations N]
+Defaults: --agent codex, --max-iterations 20. --prompt is required.
+USAGE
+}
+
+die() {
+  echo "$*" >&2
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prompt)
+      prompt_file="${2:-}"
+      shift 2
+      ;;
+    --max-iterations)
+      max_iterations="${2:-}"
+      shift 2
+      ;;
+    --agent)
+      agent="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+[[ -n "$prompt_file" ]] || { usage; die "--prompt is required"; }
+[[ -f "$prompt_file" ]] || die "Prompt file not found: $prompt_file"
+
+case "$agent" in
+  codex|claude) ;;
+  *) die "--agent must be codex or claude" ;;
+esac
+[[ "$max_iterations" =~ ^[0-9]+$ ]] || die "--max-iterations must be an integer"
+
+prompt_content="$(<"$prompt_file")"
+
+for ((i=1; i<=max_iterations; i++)); do
+  echo "[${i}/${max_iterations}] running $agent..."
+  if [[ "$agent" == "codex" ]]; then
+    codex exec --dangerously-bypass-approvals-and-sandbox "$prompt_content"
+  else
+    claude --dangerously-skip-permissions --print "$prompt_content"
+  fi
+  echo "[${i}/${max_iterations}] done"
+  echo
+done
