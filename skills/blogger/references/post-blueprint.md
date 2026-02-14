@@ -1,6 +1,6 @@
 # Interactive Tech Post Blueprint
 
-Use this template to produce deep, readable, SamWho-inspired posts.
+Use this template to produce deep, readable, interactive posts with SamWho + Josh + Grokking teaching patterns.
 
 ## Metadata Block
 
@@ -22,16 +22,27 @@ Deliverables:
 - concrete stakes
 - promise of what the reader will understand by the end
 
-### 2) Minimal mental model
+### 2) Reader roadmap
+
+Add a short map of the journey for long posts.
+
+Deliverables:
+- 3-7 bullet roadmap or table of contents
+- one sentence defining scope boundaries
+- one sentence on assumptions/prereqs
+
+### 3) Minimal mental model
 
 Introduce the smallest possible model that can explain the core behavior.
 
 Deliverables:
+- one-sentence section learning objective
 - plain-language explanation
 - tiny pseudocode or state diagram
 - one simple worked example
+- one analogy when it reduces cognitive load
 
-### 3) First interaction checkpoint
+### 4) First interaction checkpoint
 
 Add a small interactive component that validates the minimal model.
 
@@ -39,8 +50,9 @@ Deliverables:
 - control list (what reader can change)
 - expected observation
 - short "why this matters" note
+- explicit "what to notice" prompt
 
-### 4) Complexity ramp
+### 5) Complexity ramp
 
 Add constraints one at a time (scale, fairness, latency, memory, failures).
 
@@ -49,7 +61,17 @@ Deliverables:
 - describe what breaks
 - update model to handle that constraint
 
-### 5) Second interaction checkpoint
+### 6) Active-learning checkpoint
+
+Add a short reader challenge before the next jump in complexity.
+
+Deliverables:
+- one prediction or tracing prompt
+- optional hint
+- concise reveal/solution
+- explicit "why this answer matters" sentence
+
+### 7) Second interaction checkpoint
 
 Expose trade-offs by allowing readers to compare strategies.
 
@@ -58,7 +80,7 @@ Deliverables:
 - at least one surprising result
 - explicit interpretation
 
-### 6) Production perspective
+### 8) Production perspective
 
 Translate theory into real systems decisions.
 
@@ -66,14 +88,17 @@ Deliverables:
 - where this applies
 - where this fails
 - operational metrics to watch
+- fallback/support considerations
+- runtime/platform compatibility considerations (not web-only)
 
-### 7) Recap and next steps
+### 9) Recap and next steps
 
 Summarize what changed in the reader's mental model and suggest follow-up explorations.
 
 Deliverables:
 - concise recap bullets
 - 2-4 concrete next experiments
+- optional "practice set" (1 easy, 1 medium)
 
 ## Storytelling Beats
 
@@ -91,3 +116,5 @@ Use these beats repeatedly:
 - Insert short checkpoints every few paragraphs.
 - Prefer one idea per subsection.
 - Keep examples concrete before generalization.
+- Add practical caveats where support/performance/accessibility risks exist.
+- Add mini recaps after major concept transitions.
