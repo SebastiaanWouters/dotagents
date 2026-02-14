@@ -51,6 +51,7 @@ Deliverables:
 - expected observation
 - short "why this matters" note
 - explicit "what to notice" prompt
+- misconception this interaction resolves
 
 ### 5) Complexity ramp
 
@@ -79,6 +80,7 @@ Deliverables:
 - side-by-side output or toggles
 - at least one surprising result
 - explicit interpretation
+- one sentence on why this interaction beats static explanation
 
 ### 8) Production perspective
 
@@ -118,3 +120,4 @@ Use these beats repeatedly:
 - Keep examples concrete before generalization.
 - Add practical caveats where support/performance/accessibility risks exist.
 - Add mini recaps after major concept transitions.
+- Keep interaction cadence intentional: alternate explanation and interaction so readers are not overloaded.

@@ -33,7 +33,8 @@ Standalone + tech-neutral constraints:
 4. Add active-learning checkpoints and mini exercises.
 5. Draft the post in SamWho + Josh + Grokking-informed voice.
 6. Add implementation-agnostic interaction specs.
-7. Run a quality pass against the checklist.
+7. Run interaction utility + visual polish pass.
+8. Run a quality pass against the checklist.
 
 ### 1. Lock The Brief
 
@@ -76,9 +77,12 @@ For each major section, add at least one of:
 
 For every interactive element include:
 - Learning goal.
+- Misconception or confusion it resolves.
 - Control(s) available to the reader.
 - State model.
 - Success criteria (what the reader should notice).
+- Before/after mental-model delta.
+- Aesthetic intent (clarity, focus, and visual tone).
 
 ### 4. Add Active-Learning Checkpoints
 
@@ -107,6 +111,7 @@ Write with these constraints:
 - Add short "what to notice" prompts around interactions.
 - Add short recap bullets after major sections.
 - Keep terminology and examples portable across domains.
+- Treat beauty as functional: polish should improve focus, comprehension, and delight without distracting from the concept.
 
 Do not copy sentences, branding, or character assets from SamWho, Josh W. Comeau, or Grokking books. Emulate structure and pedagogy only.
 
@@ -119,7 +124,18 @@ When user requests build-ready guidance, produce:
 
 Do not provide framework-specific instructions unless the user explicitly asks to expand scope.
 
-### 7. Run Quality Checklist
+### 7. Run Interaction Utility + Visual Polish Pass
+
+Every interaction must pass all gates:
+- Utility gate: removing the interaction would meaningfully reduce understanding.
+- Insight gate: interaction reveals a non-obvious behavior, trade-off, or failure mode.
+- Simplicity gate: controls are minimal and staged (do not front-load too many knobs).
+- Feedback gate: each user action has immediate, interpretable output.
+- Beauty gate: visual hierarchy, spacing, and motion improve clarity rather than decoration.
+
+If any gate fails, simplify, replace, or remove the interaction.
+
+### 8. Run Quality Checklist
 
 Ship only when all checks pass:
 - Concept is introduced bottom-up.
@@ -131,6 +147,8 @@ Ship only when all checks pass:
 - Reader gets at least one explicit "what to notice" prompt per interaction block.
 - Each major concept includes an active-learning checkpoint.
 - Exercises include hint/solution support when requested.
+- Each interaction addresses a specific misconception or uncertainty.
+- Interactions meet utility and polish gates, not just novelty.
 - Conclusion summarizes and suggests next experiments.
 - Output remains implementation-agnostic and portable.
 
@@ -156,6 +174,7 @@ Return:
 - Full post draft.
 - Interaction spec with pseudocode/state model.
 - Exercise/checkpoint spec with hint and reveal behavior.
+- Interaction utility + visual polish checklist.
 - Brief test checklist for interaction behavior.
 
 ## References
