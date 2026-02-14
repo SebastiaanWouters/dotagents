@@ -1,0 +1,4 @@
+interface:
+  display_name: "Animator"
+  short_description: "Build beautiful, performant Motion One animations"
+  default_prompt: "Use $animator to design and implement accessible, performant web animations with Motion One."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blogger"
+  short_description: "SamWho-style interactive tech post writing"
+  default_prompt: "Use $blogger to draft an interactive first-principles deep dive on any engineering concept."
