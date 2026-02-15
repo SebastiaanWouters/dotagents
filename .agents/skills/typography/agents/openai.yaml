@@ -1,0 +1,4 @@
+interface:
+  display_name: "Typography"
+  short_description: "Practical typography writing and review"
+  default_prompt: "Use $typography to improve the typography of this document or webpage and explain each change."
