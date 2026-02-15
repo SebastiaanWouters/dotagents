@@ -6,6 +6,45 @@ license: Apache 2.0. Based on Anthropic's frontend-design skill. See NOTICE.md f
 
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
 
+## Impeccable Micro-Skill Orchestration
+
+Treat `frontend-design` as the base layer for visual quality and anti-pattern prevention. Route task-specific work to the matching local `impeccable-*` micro skill.
+
+### Routing Rules
+
+- Keep this skill active as baseline guidance for every frontend design task.
+- Select exactly one primary micro skill based on user intent.
+- Add secondary micro skills only when clearly needed by scope.
+- Ask clarifying questions when multiple micro skills are equally plausible.
+- Prefer this sequence for multi-step work: context, diagnose, transform, harden, polish.
+
+### Intent To Skill Map
+
+- Project design context setup: `impeccable-teach-impeccable`
+- Technical quality audit: `impeccable-audit`
+- UX/design-direction critique: `impeccable-critique`
+- Design-system alignment and consistency: `impeccable-normalize`
+- Final detail pass before ship: `impeccable-polish`
+- Reduce unnecessary complexity: `impeccable-simplify`
+- Improve UX copy and microcopy clarity: `impeccable-clarify`
+- Performance tuning: `impeccable-optimize`
+- Resilience, edge cases, i18n, error handling: `impeccable-harden`
+- Add purposeful motion: `impeccable-animate`
+- Introduce strategic color: `impeccable-colorize`
+- Increase visual impact: `impeccable-bolder`
+- Reduce excessive visual intensity: `impeccable-quieter`
+- Add delight and personality moments: `impeccable-delight`
+- Extract reusable components/tokens/patterns: `impeccable-extract`
+- Adapt UI to target contexts/devices: `impeccable-adapt`
+- Improve onboarding and empty states: `impeccable-onboard`
+
+### Common Pipelines
+
+- First pass on an existing UI: `impeccable-audit` -> `impeccable-normalize` -> `impeccable-polish`
+- Product UX refinement: `impeccable-critique` -> `impeccable-clarify` -> `impeccable-onboard`
+- High-impact visual refresh: `impeccable-bolder` or `impeccable-quieter` -> `impeccable-colorize` -> `impeccable-animate` -> `impeccable-polish`
+- Production readiness: `impeccable-optimize` -> `impeccable-harden` -> `impeccable-polish`
+
 ## Design Direction
 
 Commit to a BOLD aesthetic direction:
