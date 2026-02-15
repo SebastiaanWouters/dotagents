@@ -6,16 +6,7 @@ Start with base styles for mobile, use `min-width` queries to layer complexity. 
 
 ## Breakpoints: Content-Driven
 
-Don't chase device sizes—let content tell you where to break. Start narrow, stretch until design breaks, add breakpoint there. Tailwind v4 default breakpoints: `sm` (40rem), `md` (48rem), `lg` (64rem), `xl` (80rem), `2xl` (96rem). Use `clamp()` for fluid values without breakpoints.
-
-Customize breakpoints in your theme:
-
-```css
-@theme {
-  --breakpoint-xs: 30rem;
-  --breakpoint-3xl: 120rem;
-}
-```
+Don't chase device sizes—let content tell you where to break. Start narrow, stretch until design breaks, add breakpoint there. Three breakpoints usually suffice (640, 768, 1024px). Use `clamp()` for fluid values without breakpoints.
 
 ## Detect Input Method, Not Just Screen Size
 
