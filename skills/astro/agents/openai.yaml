@@ -1,0 +1,4 @@
+interface:
+  display_name: "Astro"
+  short_description: "Build and maintain Astro projects with current best practices"
+  default_prompt: "Use $astro to plan, build, or refactor Astro projects, with optional focused guidance for blogs and content publishing."
