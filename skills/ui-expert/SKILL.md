@@ -1,6 +1,13 @@
 ---
 name: ui-expert
-description: Build, refine, or review web UI/UX with strong visual taste, interaction design, accessibility, and front-end implementation quality. Use whenever the user wants a page, component, layout, design system, dashboard, landing page, form, navigation, responsive behavior, styling pass, UX polish, accessibility improvement, motion pass, or asks to make a web interface look or feel better. Framework-independent: think in HTML, CSS, and JavaScript primitives first, then adapt to the stack at hand.
+description: >
+  Build, refine, or review web UI/UX with strong visual taste, interaction
+  design, accessibility, and front-end implementation quality. Use whenever
+  the user wants a page, component, layout, design system, dashboard, landing
+  page, form, navigation, responsive behavior, styling pass, UX polish,
+  accessibility improvement, motion pass, or asks to make a web interface look
+  or feel better. Framework-independent: think in HTML, CSS, and JavaScript
+  primitives first, then adapt to the stack at hand.
 ---
 
 # Frontend UI/UX
